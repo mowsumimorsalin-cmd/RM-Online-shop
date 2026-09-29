@@ -3,7 +3,7 @@ const SUPABASE_URL = "https://bjcvebffuayrslsgntoq.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_5Qpjyf0cWmvxjTnhSRv7KQ_xD7udg0Z";
 
-const supabaseClient = window.supabase.createClient(
+const supabaseClient = supabase.createClient(
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY
 );
@@ -110,287 +110,390 @@ const categories = [
 
 
 /* =========================================================
-   DELIVERY CHARGES
-========================================================= */
-
-const deliveryCharges = {
-  "Dhaka City": 80,
-  "Dhaka Sub Urban": 100,
-  "Outside Dhaka": 120
-};
-
-
-/* =========================================================
-   LOCATION DATA
-   64 District + Upazila/Thana
-========================================================= */
-
-const LOCATION_URL =
-  "https://raw.githubusercontent.com/HedaetShahriar/bangladesh-locations-dataset/main/data/bd_locations.json";
-
-let locationData = null;
-
-
-/* =========================================================
    CART
 ========================================================= */
 
-let cart = JSON.parse(
-  localStorage.getItem("cart") || "[]"
-);
+let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
 let selectedCat = "All Products";
 
+let currentCheckoutItems = [];
+
+let locationData = [];
+
 
 /* =========================================================
-   HELPERS
+   MONEY
 ========================================================= */
 
-function money(value) {
-  return "৳" + Number(value || 0).toLocaleString("en-BD");
-}
+const money = n =>
+  "৳" + Number(n).toLocaleString("en-BD");
 
 
-function getProduct(id) {
-  return products.find(
-    product => Number(product.id) === Number(id)
-  );
-}
+/* =========================================================
+   BANGLADESH DISTRICTS
+   Official national list: 64 districts
+========================================================= */
+
+const districtList = [
+  "Bagerhat",
+  "Bandarban",
+  "Barguna",
+  "Barishal",
+  "Bhola",
+  "Bogura",
+  "Brahmanbaria",
+  "Chandpur",
+  "Chattogram",
+  "Chuadanga",
+  "Cox's Bazar",
+  "Cumilla",
+  "Dhaka",
+  "Dinajpur",
+  "Faridpur",
+  "Feni",
+  "Gaibandha",
+  "Gazipur",
+  "Gopalganj",
+  "Habiganj",
+  "Jamalpur",
+  "Jashore",
+  "Jhalokati",
+  "Jhenaidah",
+  "Joypurhat",
+  "Khagrachhari",
+  "Khulna",
+  "Kishoreganj",
+  "Kurigram",
+  "Kushtia",
+  "Lakshmipur",
+  "Lalmonirhat",
+  "Madaripur",
+  "Magura",
+  "Manikganj",
+  "Meherpur",
+  "Moulvibazar",
+  "Munshiganj",
+  "Mymensingh",
+  "Naogaon",
+  "Narail",
+  "Narayanganj",
+  "Narsingdi",
+  "Natore",
+  "Netrokona",
+  "Nilphamari",
+  "Noakhali",
+  "Pabna",
+  "Panchagarh",
+  "Patuakhali",
+  "Pirojpur",
+  "Rajbari",
+  "Rajshahi",
+  "Rangamati",
+  "Rangpur",
+  "Satkhira",
+  "Shariatpur",
+  "Sherpur",
+  "Sirajganj",
+  "Sunamganj",
+  "Sylhet",
+  "Tangail",
+  "Thakurgaon"
+];
 
 
-function saveCart() {
-  localStorage.setItem(
-    "cart",
-    JSON.stringify(cart)
-  );
+/* =========================================================
+   DHAKA METROPOLITAN POLICE
+   Official DMP list
+========================================================= */
 
-  renderCart();
+const dhakaThanas = [
+  "Adabor",
+  "Airport",
+  "Badda",
+  "Banani",
+  "Bangshal",
+  "Bhashantek",
+  "Cantonment",
+  "Chackbazar",
+  "Darussalam",
+  "Daskhinkhan",
+  "Demra",
+  "Dhanmondi",
+  "Gandaria",
+  "Gulshan",
+  "Hazaribag",
+  "Jatrabari",
+  "Kadamtoli",
+  "Kafrul",
+  "Kalabagan",
+  "Kamrangirchar",
+  "Khilgaon",
+  "Khilkhet",
+  "Kotwali",
+  "Lalbag",
+  "Mirpur Model",
+  "Mohammadpur",
+  "Motijheel",
+  "Mugda",
+  "New Market",
+  "Pallabi",
+  "Paltan Model",
+  "Ramna Model",
+  "Rampura",
+  "Rupnagar",
+  "Sabujbag",
+  "Shah Ali",
+  "Shahbag",
+  "Sherebanglanagar",
+  "Shyampur",
+  "Sutrapur",
+  "Shahjahanpur",
+  "Tejgaon",
+  "Tejgaon I/A",
+  "Turag",
+  "Uttara Model",
+  "Uttarkhan",
+  "Uttara West",
+  "Vatara",
+  "Wari"
+];
 
-  const count =
-    document.querySelector("#cartCount");
 
-  if (count) {
-    count.textContent =
-      cart.reduce(
-        (sum, item) =>
-          sum + Number(item.qty || 0),
-        0
-      );
+/* =========================================================
+   LOCATION DATA SOURCE
+========================================================= */
+
+const LOCATION_DATA_URL =
+  "https://iqbalhasandev.github.io/bangladesh-geo-json/bangladesh-geo.json";
+
+
+/* =========================================================
+   LOAD LOCATION DATA
+========================================================= */
+
+async function loadLocationData() {
+
+  try {
+
+    const response = await fetch(
+      LOCATION_DATA_URL,
+      {
+        cache: "no-store"
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Location data could not be loaded.");
+    }
+
+    locationData = await response.json();
+
+  } catch (error) {
+
+    console.error(
+      "Location data loading error:",
+      error
+    );
+
+    locationData = [];
+
   }
+
+  updateDistrictList();
+
 }
 
 
 /* =========================================================
-   CALL NOW
+   UPDATE DISTRICT DATALIST
 ========================================================= */
 
-function addCallNowStyles() {
+function updateDistrictList() {
+
+  const list =
+    document.querySelector("#districtList");
+
+  if (!list) return;
+
+  list.innerHTML =
+    districtList.map(d => `
+      <option value="${d}"></option>
+    `).join("");
+
+}
+
+
+/* =========================================================
+   NORMALIZE TEXT
+========================================================= */
+
+function normalizeText(value) {
+
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+}
+
+
+/* =========================================================
+   FIND DISTRICT
+========================================================= */
+
+function findDistrict(input) {
+
+  const value =
+    normalizeText(input);
+
+  if (!value) return null;
+
+  return districtList.find(
+    d =>
+      normalizeText(d) === value
+  ) || null;
+
+}
+
+
+/* =========================================================
+   GET THANA / UPAZILA LIST
+========================================================= */
+
+function getThanaListForDistrict(district) {
+
+  if (!district) {
+    return [];
+  }
+
+
+  /* Dhaka = DMP Police Stations */
 
   if (
-    document.getElementById(
-      "rmCallNowStyles"
-    )
+    normalizeText(district) ===
+    "dhaka"
+  ) {
+
+    return [...dhakaThanas];
+
+  }
+
+
+  /* Other districts = administrative upazilas */
+
+  if (!Array.isArray(locationData)) {
+    return [];
+  }
+
+
+  for (const division of locationData) {
+
+    if (
+      !division ||
+      !Array.isArray(division.districts)
+    ) {
+      continue;
+    }
+
+
+    const foundDistrict =
+      division.districts.find(
+        d => {
+
+          const name =
+            normalizeText(d.name);
+
+          const bn =
+            normalizeText(d.bn_name);
+
+          return (
+            name === normalizeText(district) ||
+            bn === normalizeText(district)
+          );
+
+        }
+      );
+
+
+    if (
+      foundDistrict &&
+      Array.isArray(foundDistrict.upazilas)
+    ) {
+
+      return foundDistrict.upazilas
+        .map(u =>
+          typeof u === "string"
+            ? u
+            : u.name
+        )
+        .filter(Boolean);
+
+    }
+
+  }
+
+
+  return [];
+
+}
+
+
+/* =========================================================
+   UPDATE THANA DATALIST
+========================================================= */
+
+function updateThanaList() {
+
+  const districtInput =
+    document.querySelector("#customerDistrict");
+
+  const thanaList =
+    document.querySelector("#thanaList");
+
+  const thanaInput =
+    document.querySelector("#customerThana");
+
+  if (
+    !districtInput ||
+    !thanaList
   ) {
     return;
   }
 
-  const style =
-    document.createElement("style");
 
-  style.id = "rmCallNowStyles";
-
-  style.textContent = `
-
-    @keyframes rmCallBounce {
-      0%, 80%, 100% {
-        transform: translateY(0);
-      }
-
-      90% {
-        transform: translateY(-4px);
-      }
-    }
-
-    @keyframes rmCallPulse {
-      0%, 100% {
-        transform: scale(1);
-        box-shadow:
-          0 0 0 0 rgba(220, 38, 38, 0.30);
-      }
-
-      50% {
-        transform: scale(1.04);
-        box-shadow:
-          0 0 0 8px rgba(220, 38, 38, 0);
-      }
-    }
-
-    .rm-call-top {
-      width: 100%;
-      box-sizing: border-box;
-      background: #111;
-      color: #fff;
-      text-align: center;
-      padding: 8px 12px;
-      font-size: 14px;
-      font-weight: 800;
-      position: relative;
-      z-index: 9998;
-    }
-
-    .rm-call-top a {
-      color: #fff;
-      text-decoration: none;
-      display: inline-block;
-      animation:
-        rmCallBounce 2.2s infinite;
-    }
-
-    .rm-call-bottom {
-      width: 100%;
-      box-sizing: border-box;
-      text-align: center;
-      padding: 28px 15px;
-      margin-top: 25px;
-      background: #f7f7f7;
-      border-top: 1px solid #eee;
-    }
-
-    .rm-call-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: #dc2626;
-      color: #fff !important;
-      text-decoration: none !important;
-      padding: 13px 25px;
-      border-radius: 999px;
-      font-size: 16px;
-      font-weight: 800;
-      animation:
-        rmCallPulse 2s infinite;
-    }
-
-    .rm-call-icon {
-      display: inline-block;
-      animation:
-        rmCallBounce 1.6s infinite;
-    }
-
-    .rm-location-note {
-      margin-top: 6px;
-      color: #777;
-      font-size: 12px;
-    }
-
-    .rm-order-call {
-      margin-top: 18px;
-      text-align: center;
-      font-size: 13px;
-    }
-
-    .rm-order-call a {
-      color: #dc2626;
-      font-weight: 800;
-      text-decoration: none;
-    }
-
-    @media (max-width: 600px) {
-      .rm-call-top {
-        font-size: 13px;
-      }
-
-      .rm-call-button {
-        font-size: 15px;
-        padding: 12px 21px;
-      }
-    }
-  `;
-
-  document.head.appendChild(style);
-}
+  const district =
+    findDistrict(
+      districtInput.value
+    );
 
 
-function addCallNow() {
+  const list =
+    getThanaListForDistrict(
+      district
+    );
 
-  addCallNowStyles();
 
-  /* TOP CALL NOW */
+  thanaList.innerHTML =
+    list.map(t => `
+      <option value="${t}"></option>
+    `).join("");
+
 
   if (
-    !document.getElementById(
-      "rmCallTop"
-    )
+    thanaInput &&
+    districtInput.value.trim() === ""
   ) {
 
-    const top =
-      document.createElement("div");
+    thanaInput.value = "";
 
-    top.id = "rmCallTop";
-    top.className = "rm-call-top";
-
-    top.innerHTML = `
-      📞
-      <a href="tel:01867646346">
-        CALL NOW — 01867646346
-      </a>
-    `;
-
-    document.body.prepend(top);
   }
 
-
-  /* BOTTOM CALL NOW */
-
-  if (
-    !document.getElementById(
-      "rmCallBottom"
-    )
-  ) {
-
-    const bottom =
-      document.createElement("div");
-
-    bottom.id = "rmCallBottom";
-    bottom.className =
-      "rm-call-bottom";
-
-    bottom.innerHTML = `
-      <a
-        class="rm-call-button"
-        href="tel:01867646346"
-      >
-        <span class="rm-call-icon">
-          📞
-        </span>
-
-        CALL NOW — 01867646346
-      </a>
-
-      <div class="rm-location-note">
-        Need help with your order?
-        Call us directly.
-      </div>
-    `;
-
-    const footer =
-      document.querySelector("footer");
-
-    if (footer) {
-      footer.parentNode.insertBefore(
-        bottom,
-        footer
-      );
-    } else {
-      document.body.appendChild(bottom);
-    }
-  }
 }
 
 
 /* =========================================================
-   PRODUCTS
+   PRODUCT RENDER
 ========================================================= */
 
 function renderProducts(
@@ -398,63 +501,66 @@ function renderProducts(
 ) {
 
   const grid =
-    document.querySelector(
-      "#productGrid"
-    );
+    document.querySelector("#productGrid");
 
   if (!grid) return;
 
+
   grid.innerHTML =
-    list.map(product => `
+    list.map(p => `
 
       <article class="product">
 
         <div class="discount">
-          ${product.discount}% OFF
+          ${p.discount}% OFF
         </div>
+
 
         <div
           class="product-img"
-          onclick="openProduct(${product.id})"
+          onclick="openProduct(${p.id})"
         >
-          ${product.icon}
+          ${p.icon}
         </div>
+
 
         <div class="product-body">
 
           <h3>
-            ${product.name}
+            ${p.name}
           </h3>
 
+
           <div class="stars">
-            ${product.rating}
+            ${p.rating}
           </div>
+
 
           <div class="price">
 
             <b>
-              ${money(product.price)}
+              ${money(p.price)}
             </b>
 
             <span class="old">
-              ${money(product.old)}
+              ${money(p.old)}
             </span>
 
           </div>
 
+
           <div class="product-actions">
 
             <button
-              type="button"
-              onclick="addToCart(${product.id})"
+              onclick="addToCart(${p.id})"
             >
               Add to Cart
             </button>
 
+
             <button
-              type="button"
               class="buy"
-              onclick="buyNow(${product.id})"
+              onclick="buyNow(${p.id})"
             >
               Buy Now
             </button>
@@ -466,34 +572,32 @@ function renderProducts(
       </article>
 
     `).join("");
+
 }
 
 
 /* =========================================================
-   CATEGORIES
+   CATEGORY RENDER
 ========================================================= */
 
 function renderCategories() {
 
-  const box =
-    document.querySelector(
-      "#categoryGrid"
-    );
+  const grid =
+    document.querySelector("#categoryGrid");
 
-  if (!box) return;
+  if (!grid) return;
 
-  box.innerHTML =
-    categories.map(category => `
+
+  grid.innerHTML =
+    categories.map(c => `
 
       <div
         class="category"
-        onclick="
-          filterCategory('${category}')
-        "
+        onclick="filterCategory('${c}')"
       >
 
         <b>
-          ${category}
+          ${c}
         </b>
 
         <span>
@@ -503,34 +607,40 @@ function renderCategories() {
       </div>
 
     `).join("");
+
 }
 
 
-function filterCategory(category) {
+/* =========================================================
+   FILTER CATEGORY
+========================================================= */
 
-  selectedCat = category;
+function filterCategory(c) {
 
-  const section =
-    document.querySelector(
-      "#products"
-    );
+  selectedCat = c;
 
-  if (section) {
 
-    section.scrollIntoView({
+  const productsSection =
+    document.querySelector("#products");
+
+
+  if (productsSection) {
+
+    productsSection.scrollIntoView({
       behavior: "smooth"
     });
 
   }
 
+
   renderProducts(
-    category === "All Products"
+    c === "All Products"
       ? products
       : products.filter(
-          product =>
-            product.cat === category
+          p => p.cat === c
         )
   );
+
 }
 
 
@@ -540,91 +650,122 @@ function filterCategory(category) {
 
 function addToCart(id) {
 
-  /*
-    One click = selected product only
-    Quantity always starts at 1.
-  */
+  const item =
+    cart.find(
+      x => x.id === id
+    );
 
-  cart = [
-    {
-      id: Number(id),
+
+  if (item) {
+
+    item.qty++;
+
+  } else {
+
+    cart.push({
+      id: id,
       qty: 1
-    }
-  ];
+    });
+
+  }
+
 
   saveCart();
 
   openCart();
+
 }
 
 
 /* =========================================================
    BUY NOW
+   Directly opens Order Form
 ========================================================= */
 
 function buyNow(id) {
 
-  /*
-    Buy Now:
-    1. Selected product only
-    2. Quantity 1
-    3. Cart drawer closes
-    4. Order form opens directly
-  */
-
-  cart = [
+  currentCheckoutItems = [
     {
-      id: Number(id),
+      id: id,
       qty: 1
     }
   ];
 
-  saveCart();
 
-  const drawer =
-    document.querySelector(
-      "#cartDrawer"
-    );
+  openCheckout(
+    currentCheckoutItems
+  );
 
-  if (drawer) {
-    drawer.classList.add("hidden");
-  }
-
-  setTimeout(() => {
-    openCheckout();
-  }, 80);
 }
 
 
 /* =========================================================
-   CART
+   SAVE CART
+========================================================= */
+
+function saveCart() {
+
+  localStorage.setItem(
+    "cart",
+    JSON.stringify(cart)
+  );
+
+
+  renderCart();
+
+
+  const count =
+    cart.reduce(
+      (sum, x) =>
+        sum + x.qty,
+      0
+    );
+
+
+  const countElement =
+    document.querySelector("#cartCount");
+
+
+  if (countElement) {
+
+    countElement.textContent =
+      count;
+
+  }
+
+}
+
+
+/* =========================================================
+   RENDER CART
 ========================================================= */
 
 function renderCart() {
 
   const box =
-    document.querySelector(
-      "#cartItems"
-    );
+    document.querySelector("#cartItems");
 
-  const totalBox =
-    document.querySelector(
-      "#cartTotal"
-    );
+  if (!box) return;
 
-  if (!box || !totalBox) {
-    return;
-  }
 
   if (!cart.length) {
 
     box.innerHTML =
       "<p>Your cart is empty.</p>";
 
-    totalBox.textContent =
-      money(0);
+
+    const total =
+      document.querySelector("#cartTotal");
+
+
+    if (total) {
+      total.textContent =
+        money(0);
+    }
+
 
     return;
+
   }
 
 
@@ -632,20 +773,21 @@ function renderCart() {
 
 
   box.innerHTML =
-    cart.map(item => {
+    cart.map(x => {
 
-      const product =
-        getProduct(item.id);
+      const p =
+        products.find(
+          p => p.id === x.id
+        );
 
-      if (!product) {
+
+      if (!p) {
         return "";
       }
 
-      const quantity =
-        Number(item.qty || 1);
 
       total +=
-        product.price * quantity;
+        p.price * x.qty;
 
 
       return `
@@ -653,54 +795,40 @@ function renderCart() {
         <div class="cart-line">
 
           <div class="thumb">
-            ${product.icon}
+            ${p.icon}
           </div>
+
 
           <div style="flex:1">
 
             <b>
-              ${product.name}
+              ${p.name}
             </b>
 
+
             <div>
-              ${money(product.price)}
+              ${money(p.price)}
             </div>
+
 
             <div class="qty">
 
               <button
-                type="button"
-                onclick="
-                  changeQty(
-                    ${product.id},
-                    -1
-                  )
-                "
+                onclick="changeQty(${p.id},-1)"
               >
                 −
               </button>
 
-              ${quantity}
+              ${x.qty}
 
               <button
-                type="button"
-                onclick="
-                  changeQty(
-                    ${product.id},
-                    1
-                  )
-                "
+                onclick="changeQty(${p.id},1)"
               >
                 +
               </button>
 
               <button
-                type="button"
-                onclick="
-                  removeItem(
-                    ${product.id}
-                  )
-                "
+                onclick="removeItem(${p.id})"
               >
                 Remove
               </button>
@@ -716,57 +844,74 @@ function renderCart() {
     }).join("");
 
 
-  totalBox.textContent =
-    money(total);
-}
+  const totalElement =
+    document.querySelector("#cartTotal");
 
 
-function changeQty(
-  id,
-  amount
-) {
+  if (totalElement) {
 
-  const item =
-    cart.find(
-      product =>
-        Number(product.id) ===
-        Number(id)
-    );
-
-  if (!item) return;
-
-  item.qty =
-    Number(item.qty || 1) +
-    Number(amount);
-
-
-  if (item.qty <= 0) {
-
-    cart =
-      cart.filter(
-        product =>
-          Number(product.id) !==
-          Number(id)
-      );
+    totalElement.textContent =
+      money(total);
 
   }
 
-  saveCart();
 }
 
+
+/* =========================================================
+   CHANGE QTY
+========================================================= */
+
+function changeQty(id, n) {
+
+  const item =
+    cart.find(
+      x => x.id === id
+    );
+
+
+  if (item) {
+
+    item.qty += n;
+
+
+    if (item.qty <= 0) {
+
+      cart =
+        cart.filter(
+          y => y.id !== id
+        );
+
+    }
+
+  }
+
+
+  saveCart();
+
+}
+
+
+/* =========================================================
+   REMOVE ITEM
+========================================================= */
 
 function removeItem(id) {
 
   cart =
     cart.filter(
-      item =>
-        Number(item.id) !==
-        Number(id)
+      x => x.id !== id
     );
 
+
   saveCart();
+
 }
 
+
+/* =========================================================
+   OPEN CART
+========================================================= */
 
 function openCart() {
 
@@ -775,125 +920,116 @@ function openCart() {
       "#cartDrawer"
     );
 
-  if (!drawer) return;
 
-  drawer.classList.remove(
-    "hidden"
-  );
+  if (drawer) {
 
-  renderCart();
-}
-
-
-function closeCart() {
-
-  const drawer =
-    document.querySelector(
-      "#cartDrawer"
+    drawer.classList.remove(
+      "hidden"
     );
 
-  if (!drawer) return;
+  }
 
-  drawer.classList.add(
-    "hidden"
-  );
+
+  renderCart();
+
 }
 
 
 /* =========================================================
-   PRODUCT DETAILS
+   OPEN PRODUCT
 ========================================================= */
 
 function openProduct(id) {
 
-  const product =
-    getProduct(id);
+  const p =
+    products.find(
+      x => x.id === id
+    );
 
-  if (!product) return;
 
-  const content =
+  if (!p) return;
+
+
+  const modalContent =
     document.querySelector(
       "#modalContent"
     );
 
-  const modal =
-    document.querySelector(
-      "#productModal"
-    );
 
-  if (!content || !modal) {
-    return;
-  }
+  if (!modalContent) return;
 
 
-  content.innerHTML = `
+  modalContent.innerHTML = `
 
     <div class="detail-grid">
 
       <div class="detail-img">
-        ${product.icon}
+        ${p.icon}
       </div>
+
 
       <div>
 
         <p class="eyebrow">
-          ${product.cat}
+          ${p.cat}
         </p>
 
+
         <h2>
-          ${product.name}
+          ${p.name}
         </h2>
 
+
         <div class="stars">
-          ${product.rating}
+          ${p.rating}
         </div>
+
 
         <div class="price">
 
           <b>
-            ${money(product.price)}
+            ${money(p.price)}
           </b>
 
           <span class="old">
-            ${money(product.old)}
+            ${money(p.old)}
           </span>
 
         </div>
 
+
         <p>
           Product description will go here.
-          Later you can replace this with
-          your real product details.
+          Later you can replace this with your real
+          product details, specifications, size/color
+          options and delivery information.
         </p>
+
 
         <p>
           <b>
-            ${product.discount}% discount
+            ${p.discount}% discount
           </b>
           · In stock
         </p>
 
+
         <button
-          type="button"
           class="primary"
           onclick="
-            addToCart(${product.id});
-            document
-              .querySelector('#productModal')
-              .classList.add('hidden');
+            addToCart(${p.id});
+            document.querySelector('#productModal').classList.add('hidden')
           "
         >
           Add to Cart
         </button>
 
+
         <button
-          type="button"
           class="secondary"
           onclick="
-            buyNow(${product.id});
-            document
-              .querySelector('#productModal')
-              .classList.add('hidden');
+            buyNow(${p.id});
+            document.querySelector('#productModal').classList.add('hidden')
           "
         >
           Buy Now
@@ -905,9 +1041,45 @@ function openProduct(id) {
 
   `;
 
-  modal.classList.remove(
+
+  document.querySelector(
+    "#productModal"
+  ).classList.remove(
     "hidden"
   );
+
+}
+
+
+/* =========================================================
+   CHECKOUT TOTAL
+========================================================= */
+
+function getCheckoutTotal(
+  items = []
+) {
+
+  return items.reduce(
+    (total, item) => {
+
+      const p =
+        products.find(
+          p => p.id === item.id
+        );
+
+
+      if (!p) {
+        return total;
+      }
+
+
+      return total +
+        p.price * item.qty;
+
+    },
+    0
+  );
+
 }
 
 
@@ -917,25 +1089,10 @@ function openProduct(id) {
 
 function getCartTotal() {
 
-  return cart.reduce(
-    (total, item) => {
-
-      const product =
-        getProduct(item.id);
-
-      if (!product) {
-        return total;
-      }
-
-      return total +
-        (
-          product.price *
-          Number(item.qty || 1)
-        );
-
-    },
-    0
+  return getCheckoutTotal(
+    cart
   );
+
 }
 
 
@@ -947,6 +1104,7 @@ function generateOrderNumber() {
 
   const now =
     new Date();
+
 
   const date =
     now.getFullYear().toString() +
@@ -962,11 +1120,9 @@ function generateOrderNumber() {
     String(
       now.getHours()
     ).padStart(2, "0") +
-
     String(
       now.getMinutes()
     ).padStart(2, "0") +
-
     String(
       now.getSeconds()
     ).padStart(2, "0");
@@ -979,522 +1135,99 @@ function generateOrderNumber() {
     );
 
 
-  return `
-    RM-${date}-${time}-${random}
-  `.trim();
+  return `RM-${date}-${time}-${random}`;
+
 }
 
 
 /* =========================================================
-   LOCATION DATA LOAD
+   OPEN CHECKOUT
 ========================================================= */
 
-async function loadLocationData() {
-
-  if (locationData) {
-    populateDistricts();
-    return;
-  }
-
-
-  const districtSelect =
-    document.querySelector(
-      "#customerDistrict"
-    );
-
-  if (districtSelect) {
-
-    districtSelect.innerHTML = `
-      <option value="">
-        Loading Districts...
-      </option>
-    `;
-  }
-
-
-  try {
-
-    const response =
-      await fetch(
-        LOCATION_URL,
-        {
-          cache: "force-cache"
-        }
-      );
-
-
-    if (!response.ok) {
-      throw new Error(
-        "Location data failed."
-      );
-    }
-
-
-    const data =
-      await response.json();
-
-
-    if (
-      !data ||
-      !Array.isArray(
-        data.divisions
-      )
-    ) {
-      throw new Error(
-        "Invalid location data."
-      );
-    }
-
-
-    locationData =
-      data.divisions;
-
-
-    populateDistricts();
-
-  } catch (error) {
-
-    console.error(
-      "Location loading error:",
-      error
-    );
-
-
-    if (districtSelect) {
-
-      districtSelect.innerHTML = `
-        <option value="">
-          Select District (Optional)
-        </option>
-      `;
-
-    }
-
-    const note =
-      document.querySelector(
-        "#locationNote"
-      );
-
-    if (note) {
-
-      note.textContent =
-        "District list could not be loaded. You can type your location manually.";
-
-    }
-  }
-}
-
-
-/* =========================================================
-   DISTRICT LIST
-========================================================= */
-
-function getAllDistricts() {
-
-  const list = [];
-
-  if (!Array.isArray(locationData)) {
-    return list;
-  }
-
-
-  locationData.forEach(
-    division => {
-
-      if (
-        !Array.isArray(
-          division.districts
-        )
-      ) {
-        return;
-      }
-
-
-      division.districts.forEach(
-        district => {
-
-          if (
-            district &&
-            district.name
-          ) {
-
-            list.push(
-              district
-            );
-
-          }
-
-        }
-      );
-
-    }
-  );
-
-
-  return list.sort(
-    (a, b) =>
-      String(a.name).localeCompare(
-        String(b.name)
-      )
-  );
-}
-
-
-function populateDistricts() {
-
-  const districtSelect =
-    document.querySelector(
-      "#customerDistrict"
-    );
-
-  if (!districtSelect) {
-    return;
-  }
-
-
-  districtSelect.innerHTML = `
-    <option value="">
-      Select District (Optional)
-    </option>
-  `;
-
-
-  const districts =
-    getAllDistricts();
-
-
-  districts.forEach(
-    district => {
-
-      const option =
-        document.createElement(
-          "option"
-        );
-
-      option.value =
-        district.name;
-
-      /*
-        Customer sees:
-        Bangla name + English name
-        if available.
-      */
-
-      option.textContent =
-        district.bnName
-          ? `${district.bnName} (${district.name})`
-          : district.name;
-
-      districtSelect.appendChild(
-        option
-      );
-
-    }
-  );
-}
-
-
-/* =========================================================
-   FIND SELECTED DISTRICT
-========================================================= */
-
-function findDistrict(
-  districtName
+function openCheckout(
+  items = cart
 ) {
 
-  if (!Array.isArray(locationData)) {
-    return null;
-  }
-
-
-  for (
-    const division
-    of locationData
-  ) {
-
-    if (
-      !Array.isArray(
-        division.districts
-      )
-    ) {
-      continue;
-    }
-
-
-    const district =
-      division.districts.find(
-        item =>
-          item.name ===
-          districtName
-      );
-
-
-    if (district) {
-      return district;
-    }
-  }
-
-
-  return null;
-}
-
-
-/* =========================================================
-   DISTRICT → THANA / UPAZILA
-   CUSTOMER SEES ONLY NAME
-========================================================= */
-
-function populatePoliceStations() {
-
-  const districtSelect =
-    document.querySelector(
-      "#customerDistrict"
-    );
-
-  const policeInput =
-    document.querySelector(
-      "#customerPoliceStation"
-    );
-
-  const list =
-    document.querySelector(
-      "#policeStationList"
-    );
-
   if (
-    !districtSelect ||
-    !policeInput ||
-    !list
+    !Array.isArray(items) ||
+    !items.length
   ) {
-    return;
-  }
-
-
-  list.innerHTML = "";
-
-  policeInput.value = "";
-
-
-  const districtName =
-    districtSelect.value;
-
-
-  if (!districtName) {
-
-    policeInput.placeholder =
-      "Select District first";
-
-    return;
-  }
-
-
-  const district =
-    findDistrict(
-      districtName
-    );
-
-
-  if (
-    !district ||
-    !Array.isArray(
-      district.upazilas
-    )
-  ) {
-
-    policeInput.placeholder =
-      "Type your Thana / Upazila";
-
-    return;
-  }
-
-
-  /*
-    We intentionally do NOT show
-    "Thana" or "Upazila".
-
-    Customer sees only the location name.
-  */
-
-  const names = [];
-
-  district.upazilas.forEach(
-    location => {
-
-      if (
-        location &&
-        location.name
-      ) {
-
-        names.push({
-          name:
-            location.name,
-
-          bnName:
-            location.bnName || ""
-        });
-
-      }
-
-    }
-  );
-
-
-  /*
-    Remove duplicate names.
-  */
-
-  const unique =
-    new Map();
-
-
-  names.forEach(
-    item => {
-
-      const key =
-        item.name
-          .toLowerCase()
-          .trim();
-
-      if (
-        !unique.has(key)
-      ) {
-
-        unique.set(
-          key,
-          item
-        );
-
-      }
-
-    }
-  );
-
-
-  Array.from(
-    unique.values()
-  )
-  .sort(
-    (a, b) =>
-      String(a.name).localeCompare(
-        String(b.name)
-      )
-  )
-  .forEach(
-    location => {
-
-      const option =
-        document.createElement(
-          "option"
-        );
-
-      /*
-        Value = English name
-        Label = Bangla + English
-        No type label.
-      */
-
-      option.value =
-        location.name;
-
-      option.label =
-        location.bnName
-          ? `${location.bnName} (${location.name})`
-          : location.name;
-
-      list.appendChild(
-        option
-      );
-
-    }
-  );
-
-
-  policeInput.placeholder =
-    unique.size
-      ? "Type or select location"
-      : "Type Police Station / Upazila";
-
-}
-
-
-/* =========================================================
-   CHECKOUT
-========================================================= */
-
-function openCheckout() {
-
-  if (!cart.length) {
 
     alert(
       "Your cart is empty."
     );
 
     return;
+
   }
 
 
-  const productTotal =
-    getCartTotal();
+  currentCheckoutItems =
+    items.map(item => ({
+      id: item.id,
+      qty: item.qty
+    }));
+
+
+  const total =
+    getCheckoutTotal(
+      currentCheckoutItems
+    );
 
 
   const summary =
-    cart.map(item => {
+    currentCheckoutItems.map(
+      item => {
 
-      const product =
-        getProduct(item.id);
+        const p =
+          products.find(
+            p => p.id === item.id
+          );
 
-      if (!product) {
-        return "";
+
+        if (!p) {
+          return "";
+        }
+
+
+        return `
+
+          <div
+            style="
+              padding:10px 0;
+              border-bottom:1px solid #eee;
+            "
+          >
+
+            <b>
+              ${p.name}
+            </b>
+
+            <br>
+
+            Qty:
+            ${item.qty}
+            ×
+            ${money(p.price)}
+
+          </div>
+
+        `;
+
       }
+    ).join("");
 
 
-      return `
-
-        <div
-          style="
-            padding:8px 0;
-            border-bottom:1px solid #eee;
-          "
-        >
-
-          <b>
-            ${product.name}
-          </b>
-
-          <br>
-
-          Qty:
-          ${item.qty}
-          ×
-          ${money(product.price)}
-
-        </div>
-
-      `;
-
-    }).join("");
-
-
-  const content =
+  const modalContent =
     document.querySelector(
       "#modalContent"
     );
 
-  const modal =
-    document.querySelector(
-      "#productModal"
-    );
+
+  if (!modalContent) return;
 
 
-  if (
-    !content ||
-    !modal
-  ) {
-    return;
-  }
-
-
-  content.innerHTML = `
+  modalContent.innerHTML = `
 
     <div>
 
@@ -1502,16 +1235,16 @@ function openCheckout() {
         RM ONLINE SHOP
       </p>
 
+
       <h2>
         Place Your Order
       </h2>
+
 
       <p>
         Please enter your delivery information.
       </p>
 
-
-      <!-- PRODUCT SUMMARY -->
 
       <div
         style="
@@ -1522,30 +1255,60 @@ function openCheckout() {
       </div>
 
 
-      <!-- PRODUCT TOTAL -->
+      <h3
+        style="
+          margin:15px 0;
+        "
+      >
+        Product Total:
+        ${money(total)}
+      </h3>
+
+
+      <!-- CALL US -->
 
       <div
         style="
-          padding:10px 0;
-          font-weight:600;
+          margin:18px 0;
+          padding:14px 16px;
+          background:#fff7e6;
+          border:2px solid #ffb000;
+          border-radius:10px;
         "
       >
 
-        Product Total:
+        <div
+          style="
+            font-size:13px;
+            font-weight:700;
+            margin-bottom:5px;
+          "
+        >
+          Need Help? Call Us
+        </div>
 
-        <span id="productTotal">
-          ${money(productTotal)}
-        </span>
+
+        <a
+          href="tel:01867646346"
+          style="
+            display:inline-block;
+            font-size:20px;
+            font-weight:800;
+            color:#d97700;
+            text-decoration:none;
+            letter-spacing:.5px;
+          "
+        >
+          📞 01867646346
+        </a>
 
       </div>
 
 
-      <!-- ORDER FORM -->
-
       <form id="orderForm">
 
 
-        <!-- NAME -->
+        <!-- FULL NAME -->
 
         <label
           style="
@@ -1556,10 +1319,12 @@ function openCheckout() {
           Full Name
         </label>
 
+
         <input
           id="customerName"
           type="text"
           placeholder="Your full name"
+          autocomplete="name"
           required
           style="
             width:100%;
@@ -1582,10 +1347,12 @@ function openCheckout() {
           Mobile Number
         </label>
 
+
         <input
           id="customerPhone"
           type="tel"
           placeholder="01XXXXXXXXX"
+          autocomplete="tel"
           required
           style="
             width:100%;
@@ -1608,9 +1375,11 @@ function openCheckout() {
           Delivery Address
         </label>
 
+
         <textarea
           id="customerAddress"
-          placeholder="Full delivery address"
+          placeholder="House/Road/Area and full delivery address"
+          autocomplete="street-address"
           required
           rows="4"
           style="
@@ -1633,50 +1402,23 @@ function openCheckout() {
           "
         >
           District
-          <small>
+          <span
+            style="
+              color:#888;
+              font-size:12px;
+            "
+          >
             (Optional)
-          </small>
+          </span>
         </label>
 
-        <select
-          id="customerDistrict"
-          style="
-            width:100%;
-            padding:12px;
-            border:1px solid #ddd;
-            border-radius:8px;
-            background:#fff;
-            box-sizing:border-box;
-          "
-        >
-
-          <option value="">
-            Loading Districts...
-          </option>
-
-        </select>
-
-
-        <!-- POLICE STATION -->
-
-        <label
-          style="
-            display:block;
-            margin:12px 0 6px;
-          "
-        >
-          Police Station
-          <small>
-            (Optional)
-          </small>
-        </label>
 
         <input
-          id="customerPoliceStation"
+          id="customerDistrict"
           type="text"
-          list="policeStationList"
-          autocomplete="off"
-          placeholder="Select District first"
+          list="districtList"
+          placeholder="Type or select district"
+          autocomplete="address-level1"
           style="
             width:100%;
             padding:12px;
@@ -1686,21 +1428,11 @@ function openCheckout() {
           "
         >
 
-        <datalist
-          id="policeStationList"
-        ></datalist>
+
+        <datalist id="districtList"></datalist>
 
 
-        <div
-          id="locationNote"
-          class="rm-location-note"
-        >
-          Select a District to see
-          its locations.
-        </div>
-
-
-        <!-- DELIVERY AREA -->
+        <!-- THANA -->
 
         <label
           style="
@@ -1708,151 +1440,35 @@ function openCheckout() {
             margin:12px 0 6px;
           "
         >
-          Delivery Area
-          <small>
+          Thana / Upazila
+          <span
+            style="
+              color:#888;
+              font-size:12px;
+            "
+          >
             (Optional)
-          </small>
+          </span>
         </label>
 
-        <select
-          id="deliveryArea"
+
+        <input
+          id="customerThana"
+          type="text"
+          list="thanaList"
+          placeholder="Select district first, then type/select thana"
+          autocomplete="address-level2"
           style="
             width:100%;
             padding:12px;
             border:1px solid #ddd;
             border-radius:8px;
-            background:#fff;
             box-sizing:border-box;
           "
         >
 
-          <option value="">
-            Select Delivery Area (Optional)
-          </option>
 
-          <option value="Dhaka City">
-            Dhaka City — ৳80
-          </option>
-
-          <option value="Dhaka Sub Urban">
-            Dhaka Sub Urban — ৳100
-          </option>
-
-          <option value="Outside Dhaka">
-            Outside Dhaka — ৳120
-          </option>
-
-        </select>
-
-
-        <!-- DELIVERY CHARGE LIST -->
-
-        <div
-          style="
-            margin-top:16px;
-            padding:12px;
-            border:1px solid #eee;
-            border-radius:8px;
-            background:#fafafa;
-          "
-        >
-
-          <div
-            style="
-              display:flex;
-              justify-content:space-between;
-              padding:5px 0;
-            "
-          >
-
-            <span>
-              Dhaka City
-            </span>
-
-            <strong>
-              ৳80
-            </strong>
-
-          </div>
-
-
-          <div
-            style="
-              display:flex;
-              justify-content:space-between;
-              padding:5px 0;
-            "
-          >
-
-            <span>
-              Dhaka Sub Urban
-            </span>
-
-            <strong>
-              ৳100
-            </strong>
-
-          </div>
-
-
-          <div
-            style="
-              display:flex;
-              justify-content:space-between;
-              padding:5px 0;
-            "
-          >
-
-            <span>
-              Outside Dhaka
-            </span>
-
-            <strong>
-              ৳120
-            </strong>
-
-          </div>
-
-        </div>
-
-
-        <!-- DELIVERY CHARGE -->
-
-        <div
-          style="
-            margin-top:14px;
-            padding:10px 0;
-            font-weight:600;
-          "
-        >
-
-          Delivery Charge:
-
-          <span id="deliveryCharge">
-            ৳0
-          </span>
-
-        </div>
-
-
-        <!-- FINAL TOTAL -->
-
-        <div
-          style="
-            margin-top:8px;
-            padding:14px 0;
-            font-size:20px;
-            font-weight:700;
-          "
-        >
-
-          Total Amount:
-
-          <span id="finalTotal">
-            ${money(productTotal)}
-          </span>
-
-        </div>
+        <datalist id="thanaList"></datalist>
 
 
         <!-- SUBMIT -->
@@ -1862,25 +1478,12 @@ function openCheckout() {
           class="primary"
           type="submit"
           style="
-            margin-top:16px;
+            margin-top:18px;
             width:100%;
           "
         >
           Submit Order
         </button>
-
-
-        <!-- CALL NOW -->
-
-        <div class="rm-order-call">
-
-          Need help before confirming?
-
-          <a href="tel:01867646346">
-            📞 CALL NOW — 01867646346
-          </a>
-
-        </div>
 
 
       </form>
@@ -1893,164 +1496,101 @@ function openCheckout() {
         "
       ></p>
 
+
     </div>
 
   `;
 
 
-  modal.classList.remove(
+  document.querySelector(
+    "#productModal"
+  ).classList.remove(
     "hidden"
   );
 
 
-  /*
-    Load Districts
-  */
+  /* Fill district list */
 
-  if (locationData) {
-    populateDistricts();
-  } else {
-    loadLocationData();
-  }
+  updateDistrictList();
 
 
-  /*
-    District change
-  */
+  /* District changes */
 
-  const districtSelect =
+  const districtInput =
     document.querySelector(
       "#customerDistrict"
     );
 
-  if (districtSelect) {
 
-    districtSelect.addEventListener(
+  if (districtInput) {
+
+    districtInput.addEventListener(
+      "input",
+      updateThanaList
+    );
+
+
+    districtInput.addEventListener(
       "change",
-      populatePoliceStations
+      updateThanaList
     );
 
   }
 
 
-  /*
-    Delivery change
-  */
+  /* Submit */
 
-  const deliverySelect =
-    document.querySelector(
-      "#deliveryArea"
-    );
+  document.querySelector(
+    "#orderForm"
+  ).addEventListener(
+    "submit",
+    submitOrder
+  );
 
-  if (deliverySelect) {
-
-    deliverySelect.addEventListener(
-      "change",
-      updateDeliveryTotal
-    );
-
-  }
-
-
-  /*
-    Form submit
-  */
-
-  const orderForm =
-    document.querySelector(
-      "#orderForm"
-    );
-
-  if (orderForm) {
-
-    orderForm.addEventListener(
-      "submit",
-      submitOrder
-    );
-
-  }
-
-
-  /*
-    Start with zero delivery charge
-  */
-
-  updateDeliveryTotal();
 }
 
 
 /* =========================================================
-   DELIVERY TOTAL
+   REMOVE CHECKED ITEMS FROM CART AFTER SUCCESS
 ========================================================= */
 
-function updateDeliveryTotal() {
+function removeCheckedItemsFromCart(
+  checkedItems
+) {
 
-  const deliverySelect =
-    document.querySelector(
-      "#deliveryArea"
-    );
+  for (
+    const checked of checkedItems
+  ) {
 
-  if (!deliverySelect) {
-    return;
-  }
-
-
-  const area =
-    deliverySelect.value;
+    const cartItem =
+      cart.find(
+        x => x.id === checked.id
+      );
 
 
-  const charge =
-    deliveryCharges[area] || 0;
+    if (!cartItem) {
+      continue;
+    }
 
 
-  const productTotal =
-    getCartTotal();
+    cartItem.qty -=
+      checked.qty;
 
 
-  const finalTotal =
-    productTotal + charge;
+    if (cartItem.qty <= 0) {
 
+      cart =
+        cart.filter(
+          x => x.id !== checked.id
+        );
 
-  const chargeElement =
-    document.querySelector(
-      "#deliveryCharge"
-    );
-
-
-  const totalElement =
-    document.querySelector(
-      "#finalTotal"
-    );
-
-
-  const productTotalElement =
-    document.querySelector(
-      "#productTotal"
-    );
-
-
-  if (chargeElement) {
-
-    chargeElement.textContent =
-      money(charge);
+    }
 
   }
 
 
-  if (totalElement) {
+  saveCart();
 
-    totalElement.textContent =
-      money(finalTotal);
-
-  }
-
-
-  if (productTotalElement) {
-
-    productTotalElement.textContent =
-      money(productTotal);
-
-  }
 }
 
 
@@ -2058,7 +1598,9 @@ function updateDeliveryTotal() {
    SUBMIT ORDER
 ========================================================= */
 
-async function submitOrder(event) {
+async function submitOrder(
+  event
+) {
 
   event.preventDefault();
 
@@ -2076,81 +1618,33 @@ async function submitOrder(event) {
 
 
   const name =
-    document
-      .querySelector(
-        "#customerName"
-      )
-      .value
-      .trim();
+    document.querySelector(
+      "#customerName"
+    ).value.trim();
 
 
   const phone =
-    document
-      .querySelector(
-        "#customerPhone"
-      )
-      .value
-      .trim();
+    document.querySelector(
+      "#customerPhone"
+    ).value.trim();
 
 
   const address =
-    document
-      .querySelector(
-        "#customerAddress"
-      )
-      .value
-      .trim();
-
-
-  const districtElement =
     document.querySelector(
-      "#customerDistrict"
-    );
-
-
-  const policeElement =
-    document.querySelector(
-      "#customerPoliceStation"
-    );
-
-
-  const deliveryElement =
-    document.querySelector(
-      "#deliveryArea"
-    );
+      "#customerAddress"
+    ).value.trim();
 
 
   const district =
-    districtElement
-      ? districtElement.value
-      : "";
+    document.querySelector(
+      "#customerDistrict"
+    ).value.trim();
 
 
-  const policeStation =
-    policeElement
-      ? policeElement.value.trim()
-      : "";
-
-
-  const deliveryArea =
-    deliveryElement
-      ? deliveryElement.value
-      : "";
-
-
-  const deliveryCharge =
-    deliveryCharges[
-      deliveryArea
-    ] || 0;
-
-
-  const productTotal =
-    getCartTotal();
-
-
-  const finalTotal =
-    productTotal +
-    deliveryCharge;
+  const thana =
+    document.querySelector(
+      "#customerThana"
+    ).value.trim();
 
 
   if (
@@ -2159,72 +1653,102 @@ async function submitOrder(event) {
     !address
   ) {
 
-    if (message) {
-
-      message.textContent =
-        "Please fill in your Name, Mobile Number and Delivery Address.";
-
-    }
+    message.textContent =
+      "Please fill in all required information.";
 
     return;
+
   }
-
-
-  /*
-    Basic Bangladesh / international
-    phone length validation.
-  */
-
-  const phoneDigits =
-    phone.replace(
-      /\D/g,
-      ""
-    );
 
 
   if (
-    phoneDigits.length < 10 ||
-    phoneDigits.length > 15
+    !currentCheckoutItems.length
   ) {
 
-    if (message) {
+    message.textContent =
+      "Your order is empty.";
+
+    return;
+
+  }
+
+
+  /* Validate district if entered */
+
+  if (district) {
+
+    const validDistrict =
+      findDistrict(
+        district
+      );
+
+
+    if (!validDistrict) {
 
       message.textContent =
-        "Please enter a valid mobile number.";
+        "Please select a valid district from the list.";
+
+      return;
 
     }
 
-    return;
   }
 
 
-  if (!cart.length) {
+  /* Validate thana if entered */
 
-    if (message) {
+  if (thana && !district) {
+
+    message.textContent =
+      "Please select a district first.";
+
+    return;
+
+  }
+
+
+  if (
+    district &&
+    thana
+  ) {
+
+    const availableThanas =
+      getThanaListForDistrict(
+        district
+      );
+
+
+    const validThana =
+      availableThanas.some(
+        t =>
+          normalizeText(t) ===
+          normalizeText(thana)
+      );
+
+
+    if (
+      availableThanas.length &&
+      !validThana
+    ) {
 
       message.textContent =
-        "Your cart is empty.";
+        "Please select a valid Thana / Upazila from the list.";
+
+      return;
 
     }
 
-    return;
   }
 
 
-  if (button) {
+  button.disabled = true;
 
-    button.disabled = true;
-    button.textContent =
-      "Submitting...";
-    button.style.opacity =
-      "0.6";
-
-  }
+  button.textContent =
+    "Submitting...";
 
 
-  if (message) {
-    message.textContent = "";
-  }
+  message.textContent =
+    "";
 
 
   const orderNumber =
@@ -2232,233 +1756,92 @@ async function submitOrder(event) {
 
 
   const orderProducts =
-    cart.map(item => {
+    currentCheckoutItems.map(
+      item => {
 
-      const product =
-        getProduct(item.id);
+        const p =
+          products.find(
+            p => p.id === item.id
+          );
 
 
-      return {
+        return {
 
-        id:
-          product.id,
+          id: p.id,
 
-        name:
-          product.name,
+          name: p.name,
 
-        price:
-          product.price,
+          price: p.price,
 
-        quantity:
-          Number(item.qty),
+          quantity: item.qty
 
-        subtotal:
-          product.price *
-          Number(item.qty)
+        };
 
-      };
+      }
+    );
+
+
+  const total =
+    getCheckoutTotal(
+      currentCheckoutItems
+    );
+
+
+  /*
+     We keep the existing Supabase table structure.
+
+     District and Thana are included inside the address
+     text so no new database columns are required.
+  */
+
+  const completeAddress = [
+
+    district
+      ? `District: ${district}`
+      : "",
+
+    thana
+      ? `Thana / Upazila: ${thana}`
+      : "",
+
+    `Full Address: ${address}`
+
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+
+  const {
+    error
+  } = await supabaseClient
+    .from("orders")
+    .insert({
+
+      order_number:
+        orderNumber,
+
+      customer_name:
+        name,
+
+      phone:
+        phone,
+
+      address:
+        completeAddress,
+
+      products:
+        orderProducts,
+
+      total:
+        total,
+
+      status:
+        "new"
 
     });
 
 
-  try {
-
-    const { error } =
-      await supabaseClient
-        .from("orders")
-        .insert({
-
-          order_number:
-            orderNumber,
-
-          customer_name:
-            name,
-
-          phone:
-            phone,
-
-          address:
-            address,
-
-          district:
-            district || null,
-
-          police_station:
-            policeStation || null,
-
-          delivery_area:
-            deliveryArea || null,
-
-          delivery_charge:
-            deliveryCharge,
-
-          products:
-            orderProducts,
-
-          total:
-            finalTotal,
-
-          status:
-            "new"
-
-        });
-
-
-    if (error) {
-
-      console.error(
-        "Supabase order error:",
-        error
-      );
-
-
-      if (message) {
-
-        message.textContent =
-          "Order could not be submitted. Please try again.";
-
-      }
-
-
-      if (button) {
-
-        button.disabled = false;
-
-        button.textContent =
-          "Submit Order";
-
-        button.style.opacity =
-          "1";
-
-      }
-
-      return;
-    }
-
-
-    /*
-      Clear cart only after
-      successful Supabase insert.
-    */
-
-    cart = [];
-
-    saveCart();
-
-
-    /*
-      SUCCESS SCREEN
-    */
-
-    const content =
-      document.querySelector(
-        "#modalContent"
-      );
-
-
-    if (content) {
-
-      content.innerHTML = `
-
-        <div
-          style="
-            text-align:center;
-            padding:20px;
-          "
-        >
-
-          <div
-            style="
-              font-size:48px;
-            "
-          >
-            ✅
-          </div>
-
-          <h2>
-            Order Submitted
-          </h2>
-
-          <p>
-            Thank you for your order.
-          </p>
-
-          <p>
-            Your Order Number:
-            <strong>
-              ${orderNumber}
-            </strong>
-          </p>
-
-          <p>
-            Product Total:
-            <strong>
-              ${money(productTotal)}
-            </strong>
-          </p>
-
-          <p>
-            Delivery Charge:
-            <strong>
-              ${money(deliveryCharge)}
-            </strong>
-          </p>
-
-          <p>
-            Total Amount:
-            <strong>
-              ${money(finalTotal)}
-            </strong>
-          </p>
-
-          <p>
-            Our team will call you
-            to confirm your order.
-          </p>
-
-          <a
-            href="tel:01867646346"
-            style="
-              display:inline-flex;
-              align-items:center;
-              justify-content:center;
-              gap:7px;
-              margin-top:10px;
-              padding:12px 20px;
-              border-radius:999px;
-              background:#dc2626;
-              color:#fff;
-              text-decoration:none;
-              font-weight:800;
-            "
-          >
-            📞 CALL NOW — 01867646346
-          </a>
-
-          <br>
-
-          <button
-            type="button"
-            class="primary"
-            onclick="
-              document
-                .querySelector('#productModal')
-                .classList.add('hidden');
-            "
-            style="
-              margin-top:15px;
-            "
-          >
-            Close
-          </button>
-
-        </div>
-
-      `;
-
-    }
-
-  } catch (error) {
+  if (error) {
 
     console.error(
       "Order submission error:",
@@ -2466,39 +1849,147 @@ async function submitOrder(event) {
     );
 
 
-    if (message) {
-
-      message.textContent =
-        "Something went wrong. Please try again.";
-
-    }
+    message.innerHTML = `
+      Order could not be submitted.
+      Please try again.
+    `;
 
 
-    if (button) {
+    button.disabled =
+      false;
 
-      button.disabled = false;
 
-      button.textContent =
-        "Submit Order";
+    button.textContent =
+      "Submit Order";
 
-      button.style.opacity =
-        "1";
 
-    }
+    return;
 
   }
+
+
+  /* Remove only the items that were checked out */
+
+  removeCheckedItemsFromCart(
+    currentCheckoutItems
+  );
+
+
+  const submittedOrderNumber =
+    orderNumber;
+
+
+  currentCheckoutItems =
+    [];
+
+
+  /* Success screen */
+
+  document.querySelector(
+    "#modalContent"
+  ).innerHTML = `
+
+    <div
+      style="
+        text-align:center;
+        padding:20px;
+      "
+    >
+
+      <div
+        style="
+          font-size:48px;
+        "
+      >
+        ✅
+      </div>
+
+
+      <h2>
+        Order Submitted
+      </h2>
+
+
+      <p>
+        Thank you for your order.
+      </p>
+
+
+      <p>
+        Your Order Number:
+        <strong>
+          ${submittedOrderNumber}
+        </strong>
+      </p>
+
+
+      <p>
+        Our team will call you
+        to confirm your order.
+      </p>
+
+
+      <div
+        style="
+          margin:20px 0;
+          padding:14px;
+          background:#fff7e6;
+          border:2px solid #ffb000;
+          border-radius:10px;
+        "
+      >
+
+        <div
+          style="
+            font-size:13px;
+            font-weight:700;
+            margin-bottom:5px;
+          "
+        >
+          Call Us
+        </div>
+
+
+        <a
+          href="tel:01867646346"
+          style="
+            font-size:20px;
+            font-weight:800;
+            color:#d97700;
+            text-decoration:none;
+          "
+        >
+          📞 01867646346
+        </a>
+
+      </div>
+
+
+      <button
+        class="primary"
+        onclick="
+          document.querySelector('#productModal').classList.add('hidden')
+        "
+      >
+        Close
+      </button>
+
+    </div>
+
+  `;
 
 }
 
 
 /* =========================================================
-   BUTTON EVENTS
+   CART BUTTON
 ========================================================= */
 
 const cartButton =
   document.querySelector(
     "#cartBtn"
   );
+
 
 if (cartButton) {
 
@@ -2508,43 +1999,48 @@ if (cartButton) {
 }
 
 
+/* =========================================================
+   CLOSE CART
+========================================================= */
+
 const closeCartButton =
   document.querySelector(
     "#closeCart"
   );
 
+
 if (closeCartButton) {
 
   closeCartButton.onclick =
-    closeCart;
+    () =>
+      document.querySelector(
+        "#cartDrawer"
+      ).classList.add(
+        "hidden"
+      );
 
 }
 
+
+/* =========================================================
+   CLOSE PRODUCT MODAL
+========================================================= */
 
 const closeModalButton =
   document.querySelector(
     "[data-close]"
   );
 
+
 if (closeModalButton) {
 
   closeModalButton.onclick =
-    () => {
-
-      const modal =
-        document.querySelector(
-          "#productModal"
-        );
-
-      if (modal) {
-
-        modal.classList.add(
-          "hidden"
-        );
-
-      }
-
-    };
+    () =>
+      document.querySelector(
+        "#productModal"
+      ).classList.add(
+        "hidden"
+      );
 
 }
 
@@ -2558,45 +2054,38 @@ const searchInput =
     "#searchInput"
   );
 
+
 if (searchInput) {
 
   searchInput.addEventListener(
     "input",
-    event => {
+    e => {
 
-      const query =
-        event.target.value
-          .toLowerCase()
-          .trim();
+      const q =
+        e.target.value
+          .toLowerCase();
 
 
-      const list =
+      renderProducts(
+
         products.filter(
-          product => {
+          p =>
 
-            const categoryMatch =
+            (
               selectedCat ===
-                "All Products" ||
-              product.cat ===
-                selectedCat;
+              "All Products" ||
+              p.cat === selectedCat
+            )
 
+            &&
 
-            const searchMatch =
-              product.name
-                .toLowerCase()
-                .includes(query);
+            p.name
+              .toLowerCase()
+              .includes(q)
 
+        )
 
-            return (
-              categoryMatch &&
-              searchMatch
-            );
-
-          }
-        );
-
-
-      renderProducts(list);
+      );
 
     }
   );
@@ -2613,11 +2102,12 @@ const sortSelect =
     "#sortSelect"
   );
 
+
 if (sortSelect) {
 
   sortSelect.addEventListener(
     "change",
-    event => {
+    e => {
 
       let list =
         [...products];
@@ -2630,8 +2120,8 @@ if (sortSelect) {
 
         list =
           list.filter(
-            product =>
-              product.cat ===
+            p =>
+              p.cat ===
               selectedCat
           );
 
@@ -2639,7 +2129,7 @@ if (sortSelect) {
 
 
       if (
-        event.target.value ===
+        e.target.value ===
         "low"
       ) {
 
@@ -2652,7 +2142,7 @@ if (sortSelect) {
 
 
       if (
-        event.target.value ===
+        e.target.value ===
         "high"
       ) {
 
@@ -2665,7 +2155,7 @@ if (sortSelect) {
 
 
       if (
-        event.target.value ===
+        e.target.value ===
         "discount"
       ) {
 
@@ -2678,7 +2168,9 @@ if (sortSelect) {
       }
 
 
-      renderProducts(list);
+      renderProducts(
+        list
+      );
 
     }
   );
@@ -2688,6 +2180,7 @@ if (sortSelect) {
 
 /* =========================================================
    CHECKOUT BUTTON
+   Cart -> direct Order Form
 ========================================================= */
 
 const checkoutButton =
@@ -2695,25 +2188,20 @@ const checkoutButton =
     "#checkoutBtn"
   );
 
+
 if (checkoutButton) {
 
   checkoutButton.onclick =
-    () => {
-
-      closeCart();
-
-      setTimeout(
-        openCheckout,
-        80
+    () =>
+      openCheckout(
+        cart
       );
-
-    };
 
 }
 
 
 /* =========================================================
-   START
+   INITIALIZE
 ========================================================= */
 
 renderCategories();
@@ -2722,42 +2210,4 @@ renderProducts();
 
 saveCart();
 
-addCallNow();
-
-
-/* =========================================================
-   GLOBAL FUNCTIONS
-========================================================= */
-
-window.addToCart =
-  addToCart;
-
-window.buyNow =
-  buyNow;
-
-window.openCart =
-  openCart;
-
-window.closeCart =
-  closeCart;
-
-window.changeQty =
-  changeQty;
-
-window.removeItem =
-  removeItem;
-
-window.openProduct =
-  openProduct;
-
-window.openCheckout =
-  openCheckout;
-
-window.updateDeliveryTotal =
-  updateDeliveryTotal;
-
-window.submitOrder =
-  submitOrder;
-
-window.filterCategory =
-  filterCategory;
+loadLocationData();
