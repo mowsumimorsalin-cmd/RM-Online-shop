@@ -4,7 +4,1423 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RM Online```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RM Online Shop - Admin</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f3f5f7;
+  color:#222;
+}
+.topbar{
+  background:#111;
+  color:#fff;
+  padding:18px 22px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+}
+.topbar h1{margin:0;font-size:22px}
+.topbar small{color:#bbb}
+
+.container{
+  max-width:1250px;
+  margin:25px auto;
+  padding:0 15px;
+}
+
+.login-box,.dashboard{
+  background:#fff;
+  border-radius:16px;
+  padding:24px;
+  box-shadow:0 5px 25px rgba(0,0,0,.06);
+}
+
+.login-box{
+  max-width:430px;
+  margin:70px auto;
+}
+
+h2{margin-top:0}
+
+label{
+  display:block;
+  margin:13px 0 7px;
+  font-weight:600;
+}
+
+input,select,textarea,button{
+  font:inherit;
+}
+
+input,select,textarea{
+  width:100%;
+  padding:12px;
+  border:1px solid #ddd;
+  border-radius:9px;
+  background:#fff;
+}
+
+textarea{
+  min-height:90px;
+  resize:vertical;
+}
+
+button{
+  border:0;
+  border-radius:9px;
+  padding:11px 16px;
+  cursor:pointer;
+}
+
+.login-btn{
+  width:100%;
+  margin-top:18px;
+  background:#111;
+  color:#fff;
+}
+
+.logout-btn{
+  background:#fff;
+  color:#111;
+}
+
+.message{
+  margin-top:14px;
+  padding:10px;
+  border-radius:8px;
+  display:none;
+}
+
+.error{
+  background:#ffe8e8;
+  color:#a00000;
+}
+
+.success{
+  background:#e7f8eb;
+  color:#08752b;
+}
+
+/* STATS */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:10px;
+  margin:20px 0;
+}
+
+.stat{
+  background:#f7f7f7;
+  border:1px solid #e5e5e5;
+  border-radius:12px;
+  padding:15px 8px;
+  text-align:center;
+  cursor:pointer;
+  transition:.15s;
+}
+
+.stat:hover{
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+
+.stat.active{
+  background:#111;
+  color:#fff;
+}
+
+.stat strong{
+  display:block;
+  font-size:24px;
+  margin-bottom:5px;
+}
+
+/* SEARCH */
+.toolbar{
+  display:grid;
+  grid-template-columns:1fr 180px 130px;
+  gap:10px;
+  margin-bottom:18px;
+}
+
+.search-box{
+  position:relative;
+}
+
+.search-box input{
+  padding-left:40px;
+}
+
+.search-icon{
+  position:absolute;
+  left:13px;
+  top:12px;
+}
+
+/* ORDERS */
+.orders{
+  display:grid;
+  gap:18px;
+}
+
+.order-card{
+  border:1px solid #ddd;
+  border-radius:15px;
+  background:#fff;
+  overflow:hidden;
+}
+
+.order-top{
+  padding:17px;
+  background:#fafafa;
+  border-bottom:1px solid #eee;
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  flex-wrap:wrap;
+}
+
+.order-number{
+  font-size:18px;
+  font-weight:bold;
+}
+
+.order-date{
+  color:#777;
+  font-size:13px;
+  margin-top:5px;
+}
+
+.total-top{
+  font-size:20px;
+  font-weight:bold;
+}
+
+.order-body{
+  padding:18px;
+}
+
+.section{
+  border:1px solid #eee;
+  border-radius:11px;
+  padding:14px;
+  margin-bottom:14px;
+}
+
+.section-title{
+  font-weight:bold;
+  font-size:15px;
+  margin-bottom:10px;
+}
+
+.customer-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px 20px;
+  line-height:1.6;
+}
+
+.phone-link{
+  color:#0759c7;
+  font-weight:bold;
+  text-decoration:none;
+}
+
+.call-btn{
+  display:inline-block;
+  margin-left:8px;
+  background:#111;
+  color:#fff;
+  padding:5px 9px;
+  border-radius:6px;
+  text-decoration:none;
+  font-size:13px;
+}
+
+.address{
+  margin-top:10px;
+  line-height:1.6;
+}
+
+.product-row{
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  padding:10px 0;
+  border-bottom:1px solid #eee;
+}
+
+.product-row:last-child{
+  border-bottom:0;
+}
+
+.product-name{
+  font-weight:600;
+}
+
+.product-meta{
+  color:#666;
+  font-size:14px;
+  margin-top:4px;
+}
+
+.price{
+  font-weight:bold;
+  white-space:nowrap;
+}
+
+.money-row{
+  display:flex;
+  justify-content:space-between;
+  padding:6px 0;
+}
+
+.grand-total{
+  border-top:1px solid #ddd;
+  margin-top:7px;
+  padding-top:10px;
+  font-size:19px;
+  font-weight:bold;
+}
+
+/* STATUS */
+.status-area{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.status-select{
+  font-weight:600;
+}
+
+/* NOTE */
+.note-area{
+  background:#fffdf4;
+  border-color:#eee1a8;
+}
+
+.note-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.save-note{
+  background:#111;
+  color:#fff;
+}
+
+.note-message{
+  display:none;
+  margin-top:8px;
+  color:#08752b;
+  font-size:13px;
+}
+
+.order-id-box{
+  display:flex;
+  gap:8px;
+}
+
+.order-id-box input{
+  background:#f8f8f8;
+  font-size:13px;
+}
+
+.copy-btn{
+  white-space:nowrap;
+  background:#eee;
+}
+
+/* EMPTY */
+.empty{
+  text-align:center;
+  padding:45px;
+  color:#777;
+  background:#fafafa;
+  border-radius:12px;
+}
+
+.refresh-btn{
+  background:#111;
+  color:#fff;
+}
+
+.result-info{
+  margin-bottom:12px;
+  color:#666;
+  font-size:14px;
+}
+
+@media(max-width:1000px){
+  .stats{
+    grid-template-columns:repeat(4,1fr);
+  }
+}
+
+@media(max-width:700px){
+  .stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .toolbar{
+    grid-template-columns:1fr;
+  }
+
+  .customer-grid{
+    grid-template-columns:1fr;
+  }
+
+  .status-area{
+    grid-template-columns:1fr;
+  }
+
+  .topbar{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>RM Online Shop — Admin</h1>
+    <small>Order Management Dashboard</small>
+  </div>
+
+  <button id="logoutBtn" class="logout-btn" style="display:none;">
+    Logout
+  </button>
+</div>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div id="loginBox" class="login-box">
+
+  <h2>Admin Login</h2>
+  <p>RM Online Shop Admin Dashboard</p>
+
+  <label>Username</label>
+  <input
+    id="username"
+    type="text"
+    placeholder="rmmorsalin"
+    autocomplete="username"
+  >
+
+  <label>Password</label>
+  <input
+    id="password"
+    type="password"
+    placeholder="Enter your password"
+    autocomplete="current-password"
+  >
+
+  <button id="loginBtn" class="login-btn">
+    Login
+  </button>
+
+  <div id="loginMessage" class="message"></div>
+
+</div>
+
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="dashboard" style="display:none;">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;">
+    <div>
+      <h2>Orders</h2>
+      <p style="margin:0;color:#777;">
+        Manage customer orders
+      </p>
+    </div>
+
+    <button id="refreshBtn" class="refresh-btn">
+      Refresh Orders
+    </button>
+  </div>
+
+
+  <!-- STATUS BOXES -->
+  <div class="stats">
+
+    <div class="stat active" data-filter="all">
+      <strong id="totalCount">0</strong>
+      Total
+    </div>
+
+    <div class="stat" data-filter="incomplete">
+      <strong id="incompleteCount">0</strong>
+      Incomplete
+    </div>
+
+    <div class="stat" data-filter="new">
+      <strong id="newCount">0</strong>
+      New
+    </div>
+
+    <div class="stat" data-filter="confirmed">
+      <strong id="confirmedCount">0</strong>
+      Confirmed
+    </div>
+
+    <div class="stat" data-filter="processing">
+      <strong id="processingCount">0</strong>
+      Processing
+    </div>
+
+    <div class="stat" data-filter="delivered">
+      <strong id="deliveredCount">0</strong>
+      Delivered
+    </div>
+
+    <div class="stat" data-filter="cancelled">
+      <strong id="cancelledCount">0</strong>
+      Cancelled
+    </div>
+
+  </div>
+
+
+  <!-- SEARCH / SORT -->
+  <div class="toolbar">
+
+    <div class="search-box">
+      <span class="search-icon">🔎</span>
+      <input
+        id="searchInput"
+        type="text"
+        placeholder="Search Order ID, name, phone, district, product..."
+      >
+    </div>
+
+    <select id="sortSelect">
+      <option value="newest">Newest First</option>
+      <option value="oldest">Oldest First</option>
+      <option value="high">Highest Total</option>
+      <option value="low">Lowest Total</option>
+    </select>
+
+    <button id="clearFilterBtn">
+      Clear Filter
+    </button>
+
+  </div>
+
+  <div id="resultInfo" class="result-info"></div>
+
+  <div id="orders" class="orders">
+    <div class="empty">Loading orders...</div>
+  </div>
+
+</div>
+
+</div>
+
+
+<script>
+
+const SUPABASE_URL =
+  "https://bjcvebffuayrslsgntoq.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_5Qpjyf0cWmvxjTnhSRv7KQ_xD7udg0Z";
+
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
+
+
+const ADMIN_USERNAME = "rmmorsalin";
+const ADMIN_EMAIL = "mowsumimorsalin@gmail.com";
+
+
+const loginBox = document.getElementById("loginBox");
+const dashboard = document.getElementById("dashboard");
+
+const usernameInput = document.getElementById("username");
+const passwordInput = document.getElementById("password");
+
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const refreshBtn = document.getElementById("refreshBtn");
+
+const loginMessage = document.getElementById("loginMessage");
+const ordersContainer = document.getElementById("orders");
+
+const searchInput = document.getElementById("searchInput");
+const sortSelect = document.getElementById("sortSelect");
+const clearFilterBtn = document.getElementById("clearFilterBtn");
+const resultInfo = document.getElementById("resultInfo");
+
+
+let allOrders = [];
+let currentFilter = "all";
+
+
+function showMessage(message,type="error"){
+  loginMessage.textContent = message;
+  loginMessage.className = "message " + type;
+  loginMessage.style.display = "block";
+}
+
+
+loginBtn.addEventListener("click", async ()=>{
+
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value;
+
+  if(!username || !password){
+    showMessage("Username and password are required.");
+    return;
+  }
+
+  if(username !== ADMIN_USERNAME){
+    showMessage("Invalid admin username.");
+    return;
+  }
+
+  loginBtn.disabled = true;
+  loginBtn.textContent = "Logging in...";
+
+  const {data,error} =
+    await supabaseClient.auth.signInWithPassword({
+      email: ADMIN_EMAIL,
+      password: password
+    });
+
+  loginBtn.disabled = false;
+  loginBtn.textContent = "Login";
+
+  if(error){
+    showMessage(error.message);
+    return;
+  }
+
+  if(!data.user){
+    showMessage("Login failed.");
+    return;
+  }
+
+  loginMessage.style.display = "none";
+
+  await showDashboard();
+
+});
+
+
+async function showDashboard(){
+
+  loginBox.style.display = "none";
+  dashboard.style.display = "block";
+  logoutBtn.style.display = "block";
+
+  await loadOrders();
+
+}
+
+
+logoutBtn.addEventListener("click",async ()=>{
+
+  await supabaseClient.auth.signOut();
+
+  dashboard.style.display = "none";
+  loginBox.style.display = "block";
+  logoutBtn.style.display = "none";
+
+  passwordInput.value = "";
+
+});
+
+
+async function loadOrders(){
+
+  ordersContainer.innerHTML =
+    '<div class="empty">Loading orders...</div>';
+
+  const {data:orders,error} =
+    await supabaseClient
+      .from("orders")
+      .select("*")
+      .order("created_at",{ascending:false});
+
+  if(error){
+
+    ordersContainer.innerHTML =
+      '<div class="empty">Could not load orders: ' +
+      escapeHtml(error.message) +
+      '</div>';
+
+    return;
+  }
+
+  allOrders = orders || [];
+
+  updateStats(allOrders);
+  applyFilters();
+
+}
+
+
+function updateStats(orders){
+
+  document.getElementById("totalCount").textContent =
+    orders.length;
+
+  document.getElementById("incompleteCount").textContent =
+    orders.filter(o=>o.status==="incomplete").length;
+
+  document.getElementById("newCount").textContent =
+    orders.filter(o=>o.status==="new").length;
+
+  document.getElementById("confirmedCount").textContent =
+    orders.filter(o=>o.status==="confirmed").length;
+
+  document.getElementById("processingCount").textContent =
+    orders.filter(o=>o.status==="processing").length;
+
+  document.getElementById("deliveredCount").textContent =
+    orders.filter(o=>o.status==="delivered").length;
+
+  document.getElementById("cancelledCount").textContent =
+    orders.filter(o=>o.status==="cancelled").length;
+
+}
+
+
+function applyFilters(){
+
+  const search =
+    searchInput.value.trim().toLowerCase();
+
+  let orders = [...allOrders];
+
+
+  if(currentFilter !== "all"){
+
+    orders =
+      orders.filter(o=>
+        String(o.status || "").toLowerCase() ===
+        currentFilter
+      );
+
+  }
+
+
+  if(search){
+
+    orders = orders.filter(order=>{
+
+      const products =
+        Array.isArray(order.products)
+        ? order.products
+        : [];
+
+      const productText =
+        products.map(p=>
+          String(p.name || "")
+        ).join(" ");
+
+      const text = [
+
+        order.order_number,
+        order.customer_name,
+        order.phone,
+        order.address,
+        order.district,
+        order.thana,
+        productText
+
+      ].join(" ").toLowerCase();
+
+      return text.includes(search);
+
+    });
+
+  }
+
+
+  if(sortSelect.value==="newest"){
+
+    orders.sort((a,b)=>
+      new Date(b.created_at)-new Date(a.created_at)
+    );
+
+  }
+
+  if(sortSelect.value==="oldest"){
+
+    orders.sort((a,b)=>
+      new Date(a.created_at)-new Date(b.created_at)
+    );
+
+  }
+
+  if(sortSelect.value==="high"){
+
+    orders.sort((a,b)=>
+      Number(b.total||0)-Number(a.total||0)
+    );
+
+  }
+
+  if(sortSelect.value==="low"){
+
+    orders.sort((a,b)=>
+      Number(a.total||0)-Number(b.total||0)
+    );
+
+  }
+
+
+  resultInfo.textContent =
+    "Showing " + orders.length +
+    " of " + allOrders.length + " orders";
+
+  renderOrders(orders);
+
+}
+
+
+function renderOrders(orders){
+
+  if(!orders.length){
+
+    ordersContainer.innerHTML =
+      '<div class="empty">No orders found.</div>';
+
+    return;
+  }
+
+
+  ordersContainer.innerHTML =
+    orders.map(order=>{
+
+      const products =
+        Array.isArray(order.products)
+        ? order.products
+        : [];
+
+
+      const productHtml =
+        products.length
+
+        ? products.map(product=>{
+
+            const qty =
+              Number(
+                product.quantity ??
+                product.qty ??
+                1
+              );
+
+            const price =
+              Number(product.price || 0);
+
+            return `
+              <div class="product-row">
+
+                <div>
+                  <div class="product-name">
+                    ${escapeHtml(product.name || "Product")}
+                  </div>
+
+                  <div class="product-meta">
+                    Quantity: ×${qty}
+                  </div>
+                </div>
+
+                <div class="price">
+                  ৳${price.toLocaleString()}
+                </div>
+
+              </div>
+            `;
+
+          }).join("")
+
+        : "<div>No product information</div>";
+
+
+      const createdDate =
+        order.created_at
+        ? new Date(order.created_at).toLocaleString()
+        : "-";
+
+
+      const deliveryCharge =
+        Number(order.delivery_charge || 0);
+
+      const total =
+        Number(order.total || 0);
+
+      const note =
+        order.notes || "";
+
+
+      return `
+
+        <div class="order-card">
+
+          <div class="order-top">
+
+            <div>
+
+              <div class="order-number">
+                ${escapeHtml(order.order_number || "Order")}
+              </div>
+
+              <div class="order-date">
+                ${escapeHtml(createdDate)}
+              </div>
+
+            </div>
+
+            <div class="total-top">
+              ৳${total.toLocaleString()}
+            </div>
+
+          </div>
+
+
+          <div class="order-body">
+
+
+            <!-- CUSTOMER -->
+            <div class="section">
+
+              <div class="section-title">
+                👤 Customer Details
+              </div>
+
+              <div class="customer-grid">
+
+                <div>
+                  <strong>Name:</strong><br>
+                  ${escapeHtml(order.customer_name || "-")}
+                </div>
+
+                <div>
+                  <strong>Phone:</strong><br>
+
+                  ${
+                    order.phone
+                    ? `
+                      <a
+                        class="phone-link"
+                        href="tel:${escapeHtml(order.phone)}"
+                      >
+                        ${escapeHtml(order.phone)}
+                      </a>
+
+                      <a
+                        class="call-btn"
+                        href="tel:${escapeHtml(order.phone)}"
+                      >
+                        📞 Call
+                      </a>
+                    `
+                    : "-"
+                  }
+
+                </div>
+
+              </div>
+
+
+              <div class="address">
+
+                <strong>District:</strong>
+                ${escapeHtml(order.district || "-")}
+
+                <br>
+
+                <strong>Thana / Upazila:</strong>
+                ${escapeHtml(order.thana || "-")}
+
+                <br><br>
+
+                <strong>Address:</strong><br>
+                ${escapeHtml(order.address || "-")}
+
+              </div>
+
+            </div>
+
+
+            <!-- ORDER ID -->
+            <div class="section">
+
+              <div class="section-title">
+                🆔 Order ID
+              </div>
+
+              <div class="order-id-box">
+
+                <input
+                  value="${escapeHtml(order.order_number || "")}"
+                  readonly
+                >
+
+                <button
+                  class="copy-btn"
+                  data-copy="${escapeHtml(order.order_number || "")}"
+                >
+                  Copy
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <!-- PRODUCTS -->
+            <div class="section">
+
+              <div class="section-title">
+                🛍 Products
+              </div>
+
+              ${productHtml}
+
+            </div>
+
+
+            <!-- TOTAL -->
+            <div class="section">
+
+              <div class="section-title">
+                💰 Order Summary
+              </div>
+
+              <div class="money-row">
+                <span>Product Total</span>
+                <strong>
+                  ৳${Math.max(
+                    0,
+                    total - deliveryCharge
+                  ).toLocaleString()}
+                </strong>
+              </div>
+
+              <div class="money-row">
+                <span>Delivery Charge</span>
+                <strong>
+                  ৳${deliveryCharge.toLocaleString()}
+                </strong>
+              </div>
+
+              <div class="money-row grand-total">
+                <span>Grand Total</span>
+                <strong>
+                  ৳${total.toLocaleString()}
+                </strong>
+              </div>
+
+            </div>
+
+
+            <!-- STATUS -->
+            <div class="section">
+
+              <div class="section-title">
+                📦 Order Status
+              </div>
+
+              <div class="status-area">
+
+                <div>
+
+                  <label>Status</label>
+
+                  <select
+                    class="status-select"
+                    data-order-id="${order.id}"
+                  >
+
+                    <option value="incomplete"
+                      ${order.status==="incomplete"?"selected":""}>
+                      Incomplete
+                    </option>
+
+                    <option value="new"
+                      ${order.status==="new"?"selected":""}>
+                      New
+                    </option>
+
+                    <option value="confirmed"
+                      ${order.status==="confirmed"?"selected":""}>
+                      Confirmed
+                    </option>
+
+                    <option value="processing"
+                      ${order.status==="processing"?"selected":""}>
+                      Processing
+                    </option>
+
+                    <option value="delivered"
+                      ${order.status==="delivered"?"selected":""}>
+                      Delivered
+                    </option>
+
+                    <option value="cancelled"
+                      ${order.status==="cancelled"?"selected":""}>
+                      Cancelled
+                    </option>
+
+                  </select>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <!-- NOTE -->
+            <div class="section note-area">
+
+              <div class="note-title">
+
+                <div class="section-title">
+                  📝 Admin Note
+                </div>
+
+                <button
+                  class="save-note"
+                  data-order-id="${order.id}"
+                >
+                  Save Note
+                </button>
+
+              </div>
+
+              <textarea
+                class="note-input"
+                data-order-id="${order.id}"
+                placeholder="Write a note about this customer/order..."
+              >${escapeHtml(note)}</textarea>
+
+              <div
+                class="note-message"
+                id="note-msg-${order.id}"
+              >
+                Note saved successfully.
+              </div>
+
+            </div>
+
+
+          </div>
+
+        </div>
+
+      `;
+
+    }).join("");
+
+
+  attachOrderEvents();
+
+}
+
+
+function attachOrderEvents(){
+
+
+  document
+    .querySelectorAll(".status-select")
+    .forEach(select=>{
+
+      select.addEventListener("change",async()=>{
+
+        const orderId =
+          select.dataset.orderId;
+
+        const newStatus =
+          select.value;
+
+        await updateOrderStatus(
+          orderId,
+          newStatus
+        );
+
+      });
+
+    });
+
+
+  document
+    .querySelectorAll(".save-note")
+    .forEach(button=>{
+
+      button.addEventListener("click",async()=>{
+
+        const orderId =
+          button.dataset.orderId;
+
+        const textarea =
+          document.querySelector(
+            `.note-input[data-order-id="${orderId}"]`
+          );
+
+        const message =
+          document.getElementById(
+            "note-msg-" + orderId
+          );
+
+        const note =
+          textarea ? textarea.value : "";
+
+        button.disabled = true;
+        button.textContent = "Saving...";
+
+
+        const {error} =
+          await supabaseClient
+            .from("orders")
+            .update({
+              notes: note
+            })
+            .eq("id",orderId);
+
+
+        button.disabled = false;
+        button.textContent = "Save Note";
+
+
+        if(error){
+
+          alert(
+            "Could not save note:\n" +
+            error.message
+          );
+
+          return;
+
+        }
+
+
+        const order =
+          allOrders.find(
+            o=>String(o.id)===String(orderId)
+          );
+
+        if(order){
+          order.notes = note;
+        }
+
+
+        message.style.display = "block";
+
+        setTimeout(()=>{
+          message.style.display = "none";
+        },2500);
+
+      });
+
+    });
+
+
+  document
+    .querySelectorAll(".copy-btn")
+    .forEach(button=>{
+
+      button.addEventListener("click",async()=>{
+
+        const value =
+          button.dataset.copy || "";
+
+        try{
+
+          await navigator.clipboard.writeText(value);
+
+          const old =
+            button.textContent;
+
+          button.textContent = "Copied!";
+
+          setTimeout(()=>{
+            button.textContent = old;
+          },1500);
+
+        }catch(e){
+
+          alert("Could not copy Order ID.");
+
+        }
+
+      });
+
+    });
+
+}
+
+
+async function updateOrderStatus(
+  orderId,
+  newStatus
+){
+
+  const {error} =
+    await supabaseClient
+      .from("orders")
+      .update({
+        status:newStatus
+      })
+      .eq("id",orderId);
+
+
+  if(error){
+
+    alert(
+      "Could not update order status:\n" +
+      error.message
+    );
+
+    return;
+  }
+
+
+  const order =
+    allOrders.find(
+      o=>String(o.id)===String(orderId)
+    );
+
+  if(order){
+    order.status = newStatus;
+  }
+
+
+  updateStats(allOrders);
+  applyFilters();
+
+}
+
+
+document
+  .querySelectorAll(".stat")
+  .forEach(stat=>{
+
+    stat.addEventListener("click",()=>{
+
+      document
+        .querySelectorAll(".stat")
+        .forEach(s=>
+          s.classList.remove("active")
+        );
+
+      stat.classList.add("active");
+
+      currentFilter =
+        stat.dataset.filter;
+
+      applyFilters();
+
+    });
+
+  });
+
+
+searchInput.addEventListener(
+  "input",
+  applyFilters
+);
+
+sortSelect.addEventListener(
+  "change",
+  applyFilters
+);
+
+
+clearFilterBtn.addEventListener(
+  "click",
+  ()=>{
+
+    currentFilter = "all";
+
+    searchInput.value = "";
+    sortSelect.value = "newest";
+
+    document
+      .querySelectorAll(".stat")
+      .forEach(s=>
+        s.classList.remove("active")
+      );
+
+    document
+      .querySelector('.stat[data-filter="all"]')
+      .classList.add("active");
+
+    applyFilters();
+
+  }
+);
+
+
+refreshBtn.addEventListener(
+  "click",
+  loadOrders
+);
+
+
+async function checkSession(){
+
+  const {
+    data:{session}
+  } =
+    await supabaseClient.auth.getSession();
+
+
+  if(session && session.user){
+
+    await showDashboard();
+
+  }
+
+}
+
+
+function escapeHtml(value){
+
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+
+}
+
+
+checkSession();
+
+</script>
+
+</body>
+</html>
+```
+ Shop - Admin</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
