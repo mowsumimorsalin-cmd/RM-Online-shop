@@ -2347,3 +2347,602 @@ renderProducts();
 saveCart();
 
 loadLocationData();
+/* =========================================================
+   RM ONLINE SHOP - DELIVERY CHARGE + CALL HIGHLIGHT ADD-ON
+   DO NOT REMOVE THE EXISTING DISTRICT / THANA SYSTEM
+========================================================= */
+
+(function () {
+
+  /* -------------------------------------------------------
+     DELIVERY CHARGE
+     Dhaka = 80
+     Other districts = 120
+  ------------------------------------------------------- */
+
+  function rmGetDeliveryCharge(district) {
+
+    const validDistrict =
+      findDistrict(district);
+
+    if (!validDistrict) {
+      return 0;
+    }
+
+    return normalizeText(validDistrict) === "dhaka"
+      ? 80
+      : 120;
+
+  }
+
+
+  /* -------------------------------------------------------
+     UPDATE DELIVERY BOX
+  ------------------------------------------------------- */
+
+  function rmUpdateDeliveryBox() {
+
+    const districtInput =
+      document.querySelector(
+        "#customerDistrict"
+      );
+
+    const deliveryBox =
+      document.querySelector(
+        "#rmDeliveryChargeBox"
+      );
+
+    const grandTotal =
+      document.querySelector(
+        "#rmGrandTotal"
+      );
+
+    if (!districtInput || !deliveryBox) {
+      return;
+    }
+
+
+    const district =
+      findDistrict(
+        districtInput.value
+      );
+
+
+    const deliveryCharge =
+      rmGetDeliveryCharge(
+        districtInput.value
+      );
+
+
+    const productTotal =
+      getCheckoutTotal(
+        currentCheckoutItems
+      );
+
+
+    /* Selected district charge */
+
+    const selectedText =
+      district
+        ? `${district} delivery charge: ${money(deliveryCharge)}`
+        : "Please select your district";
+
+
+    deliveryBox.querySelector(
+      "#rmSelectedCharge"
+    ).textContent =
+      selectedText;
+
+
+    /* Grand total */
+
+    if (grandTotal) {
+
+      grandTotal.textContent =
+        money(
+          productTotal +
+          deliveryCharge
+        );
+
+    }
+
+  }
+
+
+  /* -------------------------------------------------------
+     ADD DELIVERY BOX TO CHECKOUT
+  ------------------------------------------------------- */
+
+  const rmOriginalOpenCheckout =
+    openCheckout;
+
+
+  openCheckout =
+    function (items = cart) {
+
+      rmOriginalOpenCheckout(
+        items
+      );
+
+
+      setTimeout(
+        function () {
+
+          const districtInput =
+            document.querySelector(
+              "#customerDistrict"
+            );
+
+
+          const thanaInput =
+            document.querySelector(
+              "#customerThana"
+            );
+
+
+          const submitButton =
+            document.querySelector(
+              "#submitOrderBtn"
+            );
+
+
+          if (
+            !districtInput ||
+            !submitButton
+          ) {
+            return;
+          }
+
+
+          /* District is required for delivery charge */
+
+          districtInput.required =
+            true;
+
+
+          /* -------------------------------------------------
+             DELIVERY CHARGE BOX
+          ------------------------------------------------- */
+
+          if (
+            !document.querySelector(
+              "#rmDeliveryChargeBox"
+            )
+          ) {
+
+            const box =
+              document.createElement(
+                "div"
+              );
+
+
+            box.id =
+              "rmDeliveryChargeBox";
+
+
+            box.style.cssText = `
+              margin-top:14px;
+              padding:15px;
+              border:2px solid #ffb000;
+              border-radius:10px;
+              background:#fffaf0;
+              box-sizing:border-box;
+              line-height:1.8;
+            `;
+
+
+            box.innerHTML = `
+
+              <div
+                style="
+                  font-size:17px;
+                  font-weight:800;
+                  margin-bottom:7px;
+                "
+              >
+                🚚 Delivery Charge
+              </div>
+
+
+              <div
+                style="
+                  font-size:14px;
+                  font-weight:600;
+                "
+              >
+                Dhaka city delivery charge:
+                <strong>৳80</strong>
+              </div>
+
+
+              <div
+                style="
+                  font-size:14px;
+                  font-weight:600;
+                "
+              >
+                Outside Dhaka city delivery charge:
+                <strong>৳120</strong>
+              </div>
+
+
+              <div
+                style="
+                  margin-top:9px;
+                  padding-top:9px;
+                  border-top:1px solid #e5d5ad;
+                  font-size:15px;
+                  font-weight:800;
+                "
+              >
+                <span>
+                  Selected Delivery Charge:
+                </span>
+
+                <span
+                  id="rmSelectedCharge"
+                  style="
+                    float:right;
+                    color:#d97700;
+                  "
+                >
+                  Please select your district
+                </span>
+              </div>
+
+
+              <div
+                style="
+                  clear:both;
+                  margin-top:10px;
+                  padding:12px;
+                  background:#111;
+                  color:#fff;
+                  border-radius:8px;
+                  font-size:18px;
+                  font-weight:800;
+                "
+              >
+                <span>
+                  Grand Total
+                </span>
+
+                <span
+                  id="rmGrandTotal"
+                  style="float:right;"
+                >
+                  ${money(
+                    getCheckoutTotal(
+                      currentCheckoutItems
+                    )
+                  )}
+                </span>
+              </div>
+
+            `;
+
+
+            /*
+              Put Delivery box between
+              Thana and Submit Order.
+            */
+
+            submitButton.parentNode.insertBefore(
+              box,
+              submitButton
+            );
+
+          }
+
+
+          /* -------------------------------------------------
+             DISTRICT CHANGE
+             Existing Thana system remains untouched.
+          ------------------------------------------------- */
+
+          districtInput.addEventListener(
+            "input",
+            rmUpdateDeliveryBox
+          );
+
+
+          districtInput.addEventListener(
+            "change",
+            rmUpdateDeliveryBox
+          );
+
+
+          /* Initial state */
+
+          rmUpdateDeliveryBox();
+
+
+        },
+        50
+      );
+
+    };
+
+
+  /* -------------------------------------------------------
+     MAKE SUPABASE SAVE GRAND TOTAL
+     Existing order system remains unchanged.
+  ------------------------------------------------------- */
+
+  const rmOriginalFrom =
+    supabaseClient.from.bind(
+      supabaseClient
+    );
+
+
+  supabaseClient.from =
+    function (table) {
+
+      const query =
+        rmOriginalFrom(table);
+
+
+      if (
+        table !== "orders"
+      ) {
+        return query;
+      }
+
+
+      const rmOriginalInsert =
+        query.insert.bind(
+          query
+        );
+
+
+      query.insert =
+        function (values, options) {
+
+          const districtInput =
+            document.querySelector(
+              "#customerDistrict"
+            );
+
+
+          const district =
+            districtInput
+              ? districtInput.value.trim()
+              : "";
+
+
+          const deliveryCharge =
+            rmGetDeliveryCharge(
+              district
+            );
+
+
+          if (
+            values &&
+            !Array.isArray(values)
+          ) {
+
+            const productTotal =
+              Number(
+                values.total || 0
+              );
+
+
+            const grandTotal =
+              productTotal +
+              deliveryCharge;
+
+
+            values = {
+
+              ...values,
+
+              total:
+                grandTotal,
+
+              address:
+                `${values.address || ""}
+Delivery Charge: ${money(deliveryCharge)}
+Grand Total: ${money(grandTotal)}`
+
+            };
+
+          }
+
+
+          return rmOriginalInsert(
+            values,
+            options
+          );
+
+        };
+
+
+      return query;
+
+    };
+
+
+  /* -------------------------------------------------------
+     TOP + BOTTOM CALL US HIGHLIGHT
+  ------------------------------------------------------- */
+
+  function rmAddCallHighlights() {
+
+    if (
+      document.querySelector(
+        "#rmCallTop"
+      )
+    ) {
+      return;
+    }
+
+
+    /* CSS */
+
+    const style =
+      document.createElement(
+        "style"
+      );
+
+
+    style.textContent = `
+
+      @keyframes rmPhonePulse {
+
+        0% {
+          transform:scale(1);
+          box-shadow:0 0 0 0 rgba(255,176,0,.55);
+        }
+
+        50% {
+          transform:scale(1.03);
+          box-shadow:0 0 0 9px rgba(255,176,0,0);
+        }
+
+        100% {
+          transform:scale(1);
+          box-shadow:0 0 0 0 rgba(255,176,0,0);
+        }
+
+      }
+
+
+      .rm-call-highlight {
+
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:9px;
+
+        width:100%;
+        box-sizing:border-box;
+
+        padding:8px 12px;
+
+        background:#fff3cd;
+        border-top:2px solid #ffb000;
+        border-bottom:2px solid #ffb000;
+
+        font-weight:800;
+        text-align:center;
+
+        position:relative;
+        z-index:9998;
+
+      }
+
+
+      .rm-call-highlight a {
+
+        color:#d97700;
+        text-decoration:none;
+        font-size:18px;
+        font-weight:900;
+
+      }
+
+
+      .rm-call-highlight .rm-phone-number {
+
+        animation:
+          rmPhonePulse 1.8s infinite;
+
+        display:inline-block;
+
+        padding:2px 7px;
+
+        border-radius:7px;
+
+      }
+
+    `;
+
+
+    document.head.appendChild(
+      style
+    );
+
+
+    /* TOP */
+
+    const top =
+      document.createElement(
+        "div"
+      );
+
+
+    top.id =
+      "rmCallTop";
+
+
+    top.className =
+      "rm-call-highlight";
+
+
+    top.innerHTML = `
+
+      📞 Call Us:
+
+      <a
+        href="tel:01867646346"
+      >
+        <span
+          class="rm-phone-number"
+        >
+          01867646346
+        </span>
+      </a>
+
+    `;
+
+
+    document.body.insertBefore(
+      top,
+      document.body.firstChild
+    );
+
+
+    /* BOTTOM */
+
+    const bottom =
+      document.createElement(
+        "div"
+      );
+
+
+    bottom.id =
+      "rmCallBottom";
+
+
+    bottom.className =
+      "rm-call-highlight";
+
+
+    bottom.innerHTML = `
+
+      📞 Need Help?
+
+      <a
+        href="tel:01867646346"
+      >
+        <span
+          class="rm-phone-number"
+        >
+          01867646346
+        </span>
+      </a>
+
+    `;
+
+
+    document.body.appendChild(
+      bottom
+    );
+
+  }
+
+
+  rmAddCallHighlights();
+
+
+})();
