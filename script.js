@@ -131,8 +131,7 @@ const money = n =>
 
 
 /* =========================================================
-   BANGLADESH DISTRICTS
-   Official national list: 64 districts
+   BANGLADESH DISTRICTS - ENGLISH
 ========================================================= */
 
 const districtList = [
@@ -203,8 +202,7 @@ const districtList = [
 
 
 /* =========================================================
-   DHAKA METROPOLITAN POLICE
-   Official DMP list
+   DHAKA POLICE STATIONS
 ========================================================= */
 
 const dhakaThanas = [
@@ -261,7 +259,7 @@ const dhakaThanas = [
 
 
 /* =========================================================
-   LOCATION DATA SOURCE
+   LOCATION DATA
 ========================================================= */
 
 const LOCATION_DATA_URL =
@@ -269,13 +267,59 @@ const LOCATION_DATA_URL =
 
 
 /* =========================================================
+   NORMALIZE TEXT
+========================================================= */
+
+function normalizeText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+
+/* =========================================================
+   FIND DISTRICT
+========================================================= */
+
+function findDistrict(input) {
+  const value = normalizeText(input);
+
+  if (!value) return null;
+
+  return districtList.find(
+    d => normalizeText(d) === value
+  ) || null;
+}
+
+
+/* =========================================================
+   DELIVERY CHARGE
+   Dhaka = 80
+   Other districts = 120
+========================================================= */
+
+function getDeliveryCharge(district) {
+  const validDistrict = findDistrict(district);
+
+  if (!validDistrict) {
+    return 0;
+  }
+
+  if (normalizeText(validDistrict) === "dhaka") {
+    return 80;
+  }
+
+  return 120;
+}
+
+
+/* =========================================================
    LOAD LOCATION DATA
 ========================================================= */
 
 async function loadLocationData() {
-
   try {
-
     const response = await fetch(
       LOCATION_DATA_URL,
       {
@@ -290,18 +334,15 @@ async function loadLocationData() {
     locationData = await response.json();
 
   } catch (error) {
-
     console.error(
       "Location data loading error:",
       error
     );
 
     locationData = [];
-
   }
 
   updateDistrictList();
-
 }
 
 
@@ -310,7 +351,6 @@ async function loadLocationData() {
 ========================================================= */
 
 function updateDistrictList() {
-
   const list =
     document.querySelector("#districtList");
 
@@ -320,45 +360,11 @@ function updateDistrictList() {
     districtList.map(d => `
       <option value="${d}"></option>
     `).join("");
-
 }
 
 
 /* =========================================================
-   NORMALIZE TEXT
-========================================================= */
-
-function normalizeText(value) {
-
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
-
-}
-
-
-/* =========================================================
-   FIND DISTRICT
-========================================================= */
-
-function findDistrict(input) {
-
-  const value =
-    normalizeText(input);
-
-  if (!value) return null;
-
-  return districtList.find(
-    d =>
-      normalizeText(d) === value
-  ) || null;
-
-}
-
-
-/* =========================================================
-   GET THANA / UPAZILA LIST
+   GET THANA / UPAZILA
 ========================================================= */
 
 function getThanaListForDistrict(district) {
@@ -367,20 +373,16 @@ function getThanaListForDistrict(district) {
     return [];
   }
 
-
   /* Dhaka = DMP Police Stations */
 
   if (
-    normalizeText(district) ===
-    "dhaka"
+    normalizeText(district) === "dhaka"
   ) {
-
     return [...dhakaThanas];
-
   }
 
 
-  /* Other districts = administrative upazilas */
+  /* Other districts = Upazilas */
 
   if (!Array.isArray(locationData)) {
     return [];
@@ -398,22 +400,20 @@ function getThanaListForDistrict(district) {
 
 
     const foundDistrict =
-      division.districts.find(
-        d => {
+      division.districts.find(d => {
 
-          const name =
-            normalizeText(d.name);
+        const name =
+          normalizeText(d.name);
 
-          const bn =
-            normalizeText(d.bn_name);
+        const bn =
+          normalizeText(d.bn_name);
 
-          return (
-            name === normalizeText(district) ||
-            bn === normalizeText(district)
-          );
+        return (
+          name === normalizeText(district) ||
+          bn === normalizeText(district)
+        );
 
-        }
-      );
+      });
 
 
     if (
@@ -435,7 +435,6 @@ function getThanaListForDistrict(district) {
 
 
   return [];
-
 }
 
 
@@ -482,11 +481,58 @@ function updateThanaList() {
 
   if (
     thanaInput &&
-    districtInput.value.trim() === ""
+    !district
   ) {
-
     thanaInput.value = "";
+  }
 
+}
+
+
+/* =========================================================
+   UPDATE DELIVERY CHARGE
+========================================================= */
+
+function updateDeliveryCharge() {
+
+  const districtInput =
+    document.querySelector("#customerDistrict");
+
+  const deliveryChargeBox =
+    document.querySelector("#deliveryCharge");
+
+  const grandTotalBox =
+    document.querySelector("#grandTotal");
+
+  if (!districtInput) {
+    return;
+  }
+
+
+  const productTotal =
+    getCheckoutTotal(
+      currentCheckoutItems
+    );
+
+
+  const deliveryCharge =
+    getDeliveryCharge(
+      districtInput.value
+    );
+
+
+  if (deliveryChargeBox) {
+    deliveryChargeBox.textContent =
+      money(deliveryCharge);
+  }
+
+
+  if (grandTotalBox) {
+    grandTotalBox.textContent =
+      money(
+        productTotal +
+        deliveryCharge
+      );
   }
 
 }
@@ -679,7 +725,6 @@ function addToCart(id) {
 
 /* =========================================================
    BUY NOW
-   Directly opens Order Form
 ========================================================= */
 
 function buyNow(id) {
@@ -723,7 +768,9 @@ function saveCart() {
 
 
   const countElement =
-    document.querySelector("#cartCount");
+    document.querySelector(
+      "#cartCount"
+    );
 
 
   if (countElement) {
@@ -743,7 +790,9 @@ function saveCart() {
 function renderCart() {
 
   const box =
-    document.querySelector("#cartItems");
+    document.querySelector(
+      "#cartItems"
+    );
 
   if (!box) return;
 
@@ -755,17 +804,20 @@ function renderCart() {
 
 
     const total =
-      document.querySelector("#cartTotal");
+      document.querySelector(
+        "#cartTotal"
+      );
 
 
     if (total) {
+
       total.textContent =
         money(0);
+
     }
 
 
     return;
-
   }
 
 
@@ -845,7 +897,9 @@ function renderCart() {
 
 
   const totalElement =
-    document.querySelector("#cartTotal");
+    document.querySelector(
+      "#cartTotal"
+    );
 
 
   if (totalElement) {
@@ -1255,14 +1309,24 @@ function openCheckout(
       </div>
 
 
-      <h3
+      <!-- PRODUCT TOTAL -->
+
+      <div
         style="
-          margin:15px 0;
+          margin:15px 0 8px;
+          padding:12px;
+          background:#f7f7f7;
+          border-radius:8px;
+          font-weight:700;
         "
       >
+
         Product Total:
-        ${money(total)}
-      </h3>
+        <span style="float:right;">
+          ${money(total)}
+        </span>
+
+      </div>
 
 
       <!-- CALL US -->
@@ -1402,14 +1466,6 @@ function openCheckout(
           "
         >
           District
-          <span
-            style="
-              color:#888;
-              font-size:12px;
-            "
-          >
-            (Optional)
-          </span>
         </label>
 
 
@@ -1419,6 +1475,7 @@ function openCheckout(
           list="districtList"
           placeholder="Type or select district"
           autocomplete="address-level1"
+          required
           style="
             width:100%;
             padding:12px;
@@ -1432,6 +1489,30 @@ function openCheckout(
         <datalist id="districtList"></datalist>
 
 
+        <!-- DELIVERY CHARGE INFO -->
+
+        <div
+          style="
+            margin-top:8px;
+            padding:10px 12px;
+            background:#f8f8f8;
+            border-radius:8px;
+            font-size:13px;
+            line-height:1.7;
+          "
+        >
+
+          <div>
+            Dhaka city delivery charge 80 taka
+          </div>
+
+          <div>
+            Outside Dhaka city delivery charge 120 taka
+          </div>
+
+        </div>
+
+
         <!-- THANA -->
 
         <label
@@ -1441,14 +1522,6 @@ function openCheckout(
           "
         >
           Thana / Upazila
-          <span
-            style="
-              color:#888;
-              font-size:12px;
-            "
-          >
-            (Optional)
-          </span>
         </label>
 
 
@@ -1458,6 +1531,7 @@ function openCheckout(
           list="thanaList"
           placeholder="Select district first, then type/select thana"
           autocomplete="address-level2"
+          required
           style="
             width:100%;
             padding:12px;
@@ -1469,6 +1543,61 @@ function openCheckout(
 
 
         <datalist id="thanaList"></datalist>
+
+
+        <!-- DELIVERY CHARGE -->
+
+        <div
+          style="
+            margin-top:15px;
+            padding:12px;
+            background:#fff7e6;
+            border:1px solid #ffb000;
+            border-radius:8px;
+            font-weight:700;
+          "
+        >
+
+          <span>
+            Delivery Charge:
+          </span>
+
+          <span
+            id="deliveryCharge"
+            style="float:right;"
+          >
+            ৳0
+          </span>
+
+        </div>
+
+
+        <!-- GRAND TOTAL -->
+
+        <div
+          style="
+            margin-top:10px;
+            padding:14px;
+            background:#111;
+            color:#fff;
+            border-radius:8px;
+            font-size:18px;
+            font-weight:800;
+          "
+        >
+
+          <span>
+            Grand Total:
+          </span>
+
+          <span
+            id="grandTotal"
+            style="float:right;"
+          >
+            ${money(total)}
+          </span>
+
+        </div>
 
 
         <!-- SUBMIT -->
@@ -1509,12 +1638,8 @@ function openCheckout(
   );
 
 
-  /* Fill district list */
-
   updateDistrictList();
 
-
-  /* District changes */
 
   const districtInput =
     document.querySelector(
@@ -1526,19 +1651,43 @@ function openCheckout(
 
     districtInput.addEventListener(
       "input",
-      updateThanaList
+      function() {
+
+        updateThanaList();
+        updateDeliveryCharge();
+
+      }
     );
 
 
     districtInput.addEventListener(
       "change",
-      updateThanaList
+      function() {
+
+        updateThanaList();
+        updateDeliveryCharge();
+
+      }
     );
 
   }
 
 
-  /* Submit */
+  const thanaInput =
+    document.querySelector(
+      "#customerThana"
+    );
+
+
+  if (thanaInput) {
+
+    thanaInput.addEventListener(
+      "input",
+      updateDeliveryCharge
+    );
+
+  }
+
 
   document.querySelector(
     "#orderForm"
@@ -1551,7 +1700,7 @@ function openCheckout(
 
 
 /* =========================================================
-   REMOVE CHECKED ITEMS FROM CART AFTER SUCCESS
+   REMOVE CHECKED ITEMS FROM CART
 ========================================================= */
 
 function removeCheckedItemsFromCart(
@@ -1650,7 +1799,9 @@ async function submitOrder(
   if (
     !name ||
     !phone ||
-    !address
+    !address ||
+    !district ||
+    !thana
   ) {
 
     message.textContent =
@@ -1673,79 +1824,74 @@ async function submitOrder(
   }
 
 
-  /* Validate district if entered */
+  /* Validate District */
 
-  if (district) {
-
-    const validDistrict =
-      findDistrict(
-        district
-      );
+  const validDistrict =
+    findDistrict(
+      district
+    );
 
 
-    if (!validDistrict) {
-
-      message.textContent =
-        "Please select a valid district from the list.";
-
-      return;
-
-    }
-
-  }
-
-
-  /* Validate thana if entered */
-
-  if (thana && !district) {
+  if (!validDistrict) {
 
     message.textContent =
-      "Please select a district first.";
+      "Please select a valid district from the list.";
 
     return;
 
   }
 
 
+  /* Validate Thana */
+
+  const availableThanas =
+    getThanaListForDistrict(
+      district
+    );
+
+
+  const validThana =
+    availableThanas.some(
+      t =>
+        normalizeText(t) ===
+        normalizeText(thana)
+    );
+
+
   if (
-    district &&
-    thana
+    availableThanas.length &&
+    !validThana
   ) {
 
-    const availableThanas =
-      getThanaListForDistrict(
-        district
-      );
+    message.textContent =
+      "Please select a valid Thana / Upazila from the list.";
 
-
-    const validThana =
-      availableThanas.some(
-        t =>
-          normalizeText(t) ===
-          normalizeText(thana)
-      );
-
-
-    if (
-      availableThanas.length &&
-      !validThana
-    ) {
-
-      message.textContent =
-        "Please select a valid Thana / Upazila from the list.";
-
-      return;
-
-    }
+    return;
 
   }
+
+
+  const productTotal =
+    getCheckoutTotal(
+      currentCheckoutItems
+    );
+
+
+  const deliveryCharge =
+    getDeliveryCharge(
+      district
+    );
+
+
+  const grandTotal =
+    productTotal +
+    deliveryCharge;
 
 
   button.disabled = true;
 
   button.textContent =
     "Submitting...";
-
 
   message.textContent =
     "";
@@ -1781,35 +1927,24 @@ async function submitOrder(
     );
 
 
-  const total =
-    getCheckoutTotal(
-      currentCheckoutItems
-    );
-
-
-  /*
-     We keep the existing Supabase table structure.
-
-     District and Thana are included inside the address
-     text so no new database columns are required.
-  */
-
   const completeAddress = [
 
-    district
-      ? `District: ${district}`
-      : "",
+    `District: ${validDistrict}`,
 
-    thana
-      ? `Thana / Upazila: ${thana}`
-      : "",
+    `Thana / Upazila: ${thana}`,
 
-    `Full Address: ${address}`
+    `Full Address: ${address}`,
+
+    `Delivery Charge: ${money(deliveryCharge)}`
 
   ]
     .filter(Boolean)
     .join("\n");
 
+
+  /* =======================================================
+     SAVE GRAND TOTAL TO SUPABASE
+  ======================================================= */
 
   const {
     error
@@ -1833,7 +1968,7 @@ async function submitOrder(
         orderProducts,
 
       total:
-        total,
+        grandTotal,
 
       status:
         "new"
@@ -1868,7 +2003,7 @@ async function submitOrder(
   }
 
 
-  /* Remove only the items that were checked out */
+  /* Remove checked items */
 
   removeCheckedItemsFromCart(
     currentCheckoutItems
@@ -1883,7 +2018,9 @@ async function submitOrder(
     [];
 
 
-  /* Success screen */
+  /* =======================================================
+     SUCCESS SCREEN
+  ======================================================= */
 
   document.querySelector(
     "#modalContent"
@@ -2180,7 +2317,6 @@ if (sortSelect) {
 
 /* =========================================================
    CHECKOUT BUTTON
-   Cart -> direct Order Form
 ========================================================= */
 
 const checkoutButton =
