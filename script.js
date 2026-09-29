@@ -3,15 +3,15 @@ const SUPABASE_URL = "https://bjcvebffuayrslsgntoq.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_5Qpjyf0cWmvxjTnhSRv7KQ_xD7udg0Z";
 
-const supabaseClient = supabase.createClient(
+const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY
 );
 
 
-/* =========================
+/* =========================================================
    PRODUCTS
-========================= */
+========================================================= */
 
 const products = [
   {
@@ -97,9 +97,9 @@ const products = [
 ];
 
 
-/* =========================
+/* =========================================================
    CATEGORIES
-========================= */
+========================================================= */
 
 const categories = [
   "All Products",
@@ -109,9 +109,9 @@ const categories = [
 ];
 
 
-/* =========================
+/* =========================================================
    DELIVERY CHARGES
-========================= */
+========================================================= */
 
 const deliveryCharges = {
   "Dhaka City": 80,
@@ -120,80 +120,20 @@ const deliveryCharges = {
 };
 
 
-/* =========================
-   DISTRICTS
-========================= */
+/* =========================================================
+   LOCATION DATA
+   64 District + Upazila/Thana
+========================================================= */
 
-const districts = [
-  "Bagerhat",
-  "Bandarban",
-  "Barguna",
-  "Barishal",
-  "Bhola",
-  "Bogura",
-  "Brahmanbaria",
-  "Chandpur",
-  "Chattogram",
-  "Chuadanga",
-  "Cox's Bazar",
-  "Cumilla",
-  "Dhaka",
-  "Dinajpur",
-  "Faridpur",
-  "Feni",
-  "Gaibandha",
-  "Gazipur",
-  "Gopalganj",
-  "Habiganj",
-  "Jamalpur",
-  "Jashore",
-  "Jhalokathi",
-  "Jhenaidah",
-  "Joypurhat",
-  "Khagrachhari",
-  "Khulna",
-  "Kishoreganj",
-  "Kurigram",
-  "Kushtia",
-  "Lakshmipur",
-  "Lalmonirhat",
-  "Madaripur",
-  "Magura",
-  "Manikganj",
-  "Meherpur",
-  "Moulvibazar",
-  "Munshiganj",
-  "Mymensingh",
-  "Naogaon",
-  "Narail",
-  "Narayanganj",
-  "Narsingdi",
-  "Natore",
-  "Netrokona",
-  "Nilphamari",
-  "Noakhali",
-  "Pabna",
-  "Panchagarh",
-  "Patuakhali",
-  "Pirojpur",
-  "Rajbari",
-  "Rajshahi",
-  "Rangamati",
-  "Rangpur",
-  "Satkhira",
-  "Shariatpur",
-  "Sherpur",
-  "Sirajganj",
-  "Sunamganj",
-  "Sylhet",
-  "Tangail",
-  "Thakurgaon"
-];
+const LOCATION_URL =
+  "https://raw.githubusercontent.com/HedaetShahriar/bangladesh-locations-dataset/main/data/bd_locations.json";
+
+let locationData = null;
 
 
-/* =========================
+/* =========================================================
    CART
-========================= */
+========================================================= */
 
 let cart = JSON.parse(
   localStorage.getItem("cart") || "[]"
@@ -202,16 +142,23 @@ let cart = JSON.parse(
 let selectedCat = "All Products";
 
 
-/* =========================
+/* =========================================================
    HELPERS
-========================= */
+========================================================= */
 
-const money = n =>
-  "৳" + Number(n || 0).toLocaleString("en-BD");
+function money(value) {
+  return "৳" + Number(value || 0).toLocaleString("en-BD");
+}
+
+
+function getProduct(id) {
+  return products.find(
+    product => Number(product.id) === Number(id)
+  );
+}
 
 
 function saveCart() {
-
   localStorage.setItem(
     "cart",
     JSON.stringify(cart)
@@ -233,97 +180,328 @@ function saveCart() {
 }
 
 
-/* =========================
-   PRODUCTS
-========================= */
+/* =========================================================
+   CALL NOW
+========================================================= */
 
-function renderProducts(list = products) {
+function addCallNowStyles() {
 
-  const grid =
-    document.querySelector("#productGrid");
+  if (
+    document.getElementById(
+      "rmCallNowStyles"
+    )
+  ) {
+    return;
+  }
 
-  if (!grid) return;
+  const style =
+    document.createElement("style");
 
-  grid.innerHTML = list.map(p => `
-    <article class="product">
+  style.id = "rmCallNowStyles";
 
-      <div class="discount">
-        ${p.discount}% OFF
-      </div>
+  style.textContent = `
 
-      <div
-        class="product-img"
-        onclick="openProduct(${p.id})"
-      >
-        ${p.icon}
-      </div>
+    @keyframes rmCallBounce {
+      0%, 80%, 100% {
+        transform: translateY(0);
+      }
 
-      <div class="product-body">
+      90% {
+        transform: translateY(-4px);
+      }
+    }
 
-        <h3>${p.name}</h3>
+    @keyframes rmCallPulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow:
+          0 0 0 0 rgba(220, 38, 38, 0.30);
+      }
 
-        <div class="stars">
-          ${p.rating}
-        </div>
+      50% {
+        transform: scale(1.04);
+        box-shadow:
+          0 0 0 8px rgba(220, 38, 38, 0);
+      }
+    }
 
-        <div class="price">
+    .rm-call-top {
+      width: 100%;
+      box-sizing: border-box;
+      background: #111;
+      color: #fff;
+      text-align: center;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: 800;
+      position: relative;
+      z-index: 9998;
+    }
 
-          <b>
-            ${money(p.price)}
-          </b>
+    .rm-call-top a {
+      color: #fff;
+      text-decoration: none;
+      display: inline-block;
+      animation:
+        rmCallBounce 2.2s infinite;
+    }
 
-          <span class="old">
-            ${money(p.old)}
-          </span>
+    .rm-call-bottom {
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      padding: 28px 15px;
+      margin-top: 25px;
+      background: #f7f7f7;
+      border-top: 1px solid #eee;
+    }
 
-        </div>
+    .rm-call-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #dc2626;
+      color: #fff !important;
+      text-decoration: none !important;
+      padding: 13px 25px;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 800;
+      animation:
+        rmCallPulse 2s infinite;
+    }
 
-        <div class="product-actions">
+    .rm-call-icon {
+      display: inline-block;
+      animation:
+        rmCallBounce 1.6s infinite;
+    }
 
-          <button
-            onclick="addToCart(${p.id})"
-          >
-            Add to Cart
-          </button>
+    .rm-location-note {
+      margin-top: 6px;
+      color: #777;
+      font-size: 12px;
+    }
 
-          <button
-            class="buy"
-            onclick="buyNow(${p.id})"
-          >
-            Buy Now
-          </button>
+    .rm-order-call {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 13px;
+    }
 
-        </div>
+    .rm-order-call a {
+      color: #dc2626;
+      font-weight: 800;
+      text-decoration: none;
+    }
 
-      </div>
+    @media (max-width: 600px) {
+      .rm-call-top {
+        font-size: 13px;
+      }
 
-    </article>
-  `).join("");
+      .rm-call-button {
+        font-size: 15px;
+        padding: 12px 21px;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
 }
 
 
-/* =========================
+function addCallNow() {
+
+  addCallNowStyles();
+
+  /* TOP CALL NOW */
+
+  if (
+    !document.getElementById(
+      "rmCallTop"
+    )
+  ) {
+
+    const top =
+      document.createElement("div");
+
+    top.id = "rmCallTop";
+    top.className = "rm-call-top";
+
+    top.innerHTML = `
+      📞
+      <a href="tel:01867646346">
+        CALL NOW — 01867646346
+      </a>
+    `;
+
+    document.body.prepend(top);
+  }
+
+
+  /* BOTTOM CALL NOW */
+
+  if (
+    !document.getElementById(
+      "rmCallBottom"
+    )
+  ) {
+
+    const bottom =
+      document.createElement("div");
+
+    bottom.id = "rmCallBottom";
+    bottom.className =
+      "rm-call-bottom";
+
+    bottom.innerHTML = `
+      <a
+        class="rm-call-button"
+        href="tel:01867646346"
+      >
+        <span class="rm-call-icon">
+          📞
+        </span>
+
+        CALL NOW — 01867646346
+      </a>
+
+      <div class="rm-location-note">
+        Need help with your order?
+        Call us directly.
+      </div>
+    `;
+
+    const footer =
+      document.querySelector("footer");
+
+    if (footer) {
+      footer.parentNode.insertBefore(
+        bottom,
+        footer
+      );
+    } else {
+      document.body.appendChild(bottom);
+    }
+  }
+}
+
+
+/* =========================================================
+   PRODUCTS
+========================================================= */
+
+function renderProducts(
+  list = products
+) {
+
+  const grid =
+    document.querySelector(
+      "#productGrid"
+    );
+
+  if (!grid) return;
+
+  grid.innerHTML =
+    list.map(product => `
+
+      <article class="product">
+
+        <div class="discount">
+          ${product.discount}% OFF
+        </div>
+
+        <div
+          class="product-img"
+          onclick="openProduct(${product.id})"
+        >
+          ${product.icon}
+        </div>
+
+        <div class="product-body">
+
+          <h3>
+            ${product.name}
+          </h3>
+
+          <div class="stars">
+            ${product.rating}
+          </div>
+
+          <div class="price">
+
+            <b>
+              ${money(product.price)}
+            </b>
+
+            <span class="old">
+              ${money(product.old)}
+            </span>
+
+          </div>
+
+          <div class="product-actions">
+
+            <button
+              type="button"
+              onclick="addToCart(${product.id})"
+            >
+              Add to Cart
+            </button>
+
+            <button
+              type="button"
+              class="buy"
+              onclick="buyNow(${product.id})"
+            >
+              Buy Now
+            </button>
+
+          </div>
+
+        </div>
+
+      </article>
+
+    `).join("");
+}
+
+
+/* =========================================================
    CATEGORIES
-========================= */
+========================================================= */
 
 function renderCategories() {
 
   const box =
-    document.querySelector("#categoryGrid");
+    document.querySelector(
+      "#categoryGrid"
+    );
 
   if (!box) return;
 
   box.innerHTML =
-    categories.map(c => `
+    categories.map(category => `
+
       <div
         class="category"
-        onclick="filterCategory('${c}')"
+        onclick="
+          filterCategory('${category}')
+        "
       >
-        <b>${c}</b>
+
+        <b>
+          ${category}
+        </b>
+
         <span>
           Explore collection →
         </span>
+
       </div>
+
     `).join("");
 }
 
@@ -333,41 +511,43 @@ function filterCategory(category) {
   selectedCat = category;
 
   const section =
-    document.querySelector("#products");
+    document.querySelector(
+      "#products"
+    );
 
   if (section) {
+
     section.scrollIntoView({
       behavior: "smooth"
     });
+
   }
 
   renderProducts(
     category === "All Products"
       ? products
       : products.filter(
-          p => p.cat === category
+          product =>
+            product.cat === category
         )
   );
 }
 
 
-/* =========================
+/* =========================================================
    ADD TO CART
-========================= */
+========================================================= */
 
 function addToCart(id) {
 
   /*
-    প্রতিবার Add to Cart করলে
-    selected product-টি শুধু 1 quantity থাকবে।
-
-    একই product আবার click করলেও
-    quantity 2 বা 3 হবে না।
+    One click = selected product only
+    Quantity always starts at 1.
   */
 
   cart = [
     {
-      id: id,
+      id: Number(id),
       qty: 1
     }
   ];
@@ -378,44 +558,63 @@ function addToCart(id) {
 }
 
 
-/* =========================
+/* =========================================================
    BUY NOW
-========================= */
+========================================================= */
 
 function buyNow(id) {
 
   /*
-    Buy Now করলে শুধু selected product
-    quantity 1 সহ cart-এ থাকবে।
+    Buy Now:
+    1. Selected product only
+    2. Quantity 1
+    3. Cart drawer closes
+    4. Order form opens directly
   */
 
   cart = [
     {
-      id: id,
+      id: Number(id),
       qty: 1
     }
   ];
 
   saveCart();
 
-  openCart();
+  const drawer =
+    document.querySelector(
+      "#cartDrawer"
+    );
+
+  if (drawer) {
+    drawer.classList.add("hidden");
+  }
+
+  setTimeout(() => {
+    openCheckout();
+  }, 80);
 }
 
 
-/* =========================
+/* =========================================================
    CART
-========================= */
+========================================================= */
 
 function renderCart() {
 
   const box =
-    document.querySelector("#cartItems");
+    document.querySelector(
+      "#cartItems"
+    );
 
   const totalBox =
-    document.querySelector("#cartTotal");
+    document.querySelector(
+      "#cartTotal"
+    );
 
-  if (!box || !totalBox) return;
-
+  if (!box || !totalBox) {
+    return;
+  }
 
   if (!cart.length) {
 
@@ -436,22 +635,21 @@ function renderCart() {
     cart.map(item => {
 
       const product =
-        products.find(
-          p => p.id === item.id
-        );
+        getProduct(item.id);
 
-      if (!product) return "";
-
+      if (!product) {
+        return "";
+      }
 
       const quantity =
         Number(item.qty || 1);
-
 
       total +=
         product.price * quantity;
 
 
       return `
+
         <div class="cart-line">
 
           <div class="thumb">
@@ -471,8 +669,12 @@ function renderCart() {
             <div class="qty">
 
               <button
+                type="button"
                 onclick="
-                  changeQty(${product.id}, -1)
+                  changeQty(
+                    ${product.id},
+                    -1
+                  )
                 "
               >
                 −
@@ -481,16 +683,23 @@ function renderCart() {
               ${quantity}
 
               <button
+                type="button"
                 onclick="
-                  changeQty(${product.id}, 1)
+                  changeQty(
+                    ${product.id},
+                    1
+                  )
                 "
               >
                 +
               </button>
 
               <button
+                type="button"
                 onclick="
-                  removeItem(${product.id})
+                  removeItem(
+                    ${product.id}
+                  )
                 "
               >
                 Remove
@@ -501,6 +710,7 @@ function renderCart() {
           </div>
 
         </div>
+
       `;
 
     }).join("");
@@ -511,29 +721,35 @@ function renderCart() {
 }
 
 
-function changeQty(id, amount) {
+function changeQty(
+  id,
+  amount
+) {
 
   const item =
     cart.find(
-      x => x.id === id
+      product =>
+        Number(product.id) ===
+        Number(id)
     );
 
   if (!item) return;
 
-
   item.qty =
     Number(item.qty || 1) +
-    amount;
+    Number(amount);
 
 
   if (item.qty <= 0) {
 
     cart =
       cart.filter(
-        x => x.id !== id
+        product =>
+          Number(product.id) !==
+          Number(id)
       );
-  }
 
+  }
 
   saveCart();
 }
@@ -543,7 +759,9 @@ function removeItem(id) {
 
   cart =
     cart.filter(
-      x => x.id !== id
+      item =>
+        Number(item.id) !==
+        Number(id)
     );
 
   saveCart();
@@ -553,36 +771,59 @@ function removeItem(id) {
 function openCart() {
 
   const drawer =
-    document.querySelector("#cartDrawer");
+    document.querySelector(
+      "#cartDrawer"
+    );
 
   if (!drawer) return;
 
-  drawer.classList.remove("hidden");
+  drawer.classList.remove(
+    "hidden"
+  );
 
   renderCart();
 }
 
 
-/* =========================
+function closeCart() {
+
+  const drawer =
+    document.querySelector(
+      "#cartDrawer"
+    );
+
+  if (!drawer) return;
+
+  drawer.classList.add(
+    "hidden"
+  );
+}
+
+
+/* =========================================================
    PRODUCT DETAILS
-========================= */
+========================================================= */
 
 function openProduct(id) {
 
   const product =
-    products.find(
-      p => p.id === id
-    );
+    getProduct(id);
 
   if (!product) return;
-
 
   const content =
     document.querySelector(
       "#modalContent"
     );
 
-  if (!content) return;
+  const modal =
+    document.querySelector(
+      "#productModal"
+    );
+
+  if (!content || !modal) {
+    return;
+  }
 
 
   content.innerHTML = `
@@ -621,8 +862,8 @@ function openProduct(id) {
 
         <p>
           Product description will go here.
-          Later you can replace this with your
-          real product details.
+          Later you can replace this with
+          your real product details.
         </p>
 
         <p>
@@ -633,10 +874,12 @@ function openProduct(id) {
         </p>
 
         <button
+          type="button"
           class="primary"
           onclick="
             addToCart(${product.id});
-            document.querySelector('#productModal')
+            document
+              .querySelector('#productModal')
               .classList.add('hidden');
           "
         >
@@ -644,10 +887,12 @@ function openProduct(id) {
         </button>
 
         <button
+          type="button"
           class="secondary"
           onclick="
             buyNow(${product.id});
-            document.querySelector('#productModal')
+            document
+              .querySelector('#productModal')
               .classList.add('hidden');
           "
         >
@@ -657,18 +902,18 @@ function openProduct(id) {
       </div>
 
     </div>
+
   `;
 
-
-  document.querySelector(
-    "#productModal"
-  ).classList.remove("hidden");
+  modal.classList.remove(
+    "hidden"
+  );
 }
 
 
-/* =========================
+/* =========================================================
    CART TOTAL
-========================= */
+========================================================= */
 
 function getCartTotal() {
 
@@ -676,9 +921,7 @@ function getCartTotal() {
     (total, item) => {
 
       const product =
-        products.find(
-          p => p.id === item.id
-        );
+        getProduct(item.id);
 
       if (!product) {
         return total;
@@ -696,14 +939,14 @@ function getCartTotal() {
 }
 
 
-/* =========================
+/* =========================================================
    ORDER NUMBER
-========================= */
+========================================================= */
 
 function generateOrderNumber() {
 
-  const now = new Date();
-
+  const now =
+    new Date();
 
   const date =
     now.getFullYear().toString() +
@@ -736,35 +979,447 @@ function generateOrderNumber() {
     );
 
 
-  return `RM-${date}-${time}-${random}`;
+  return `
+    RM-${date}-${time}-${random}
+  `.trim();
 }
 
 
-/* =========================
-   DISTRICT OPTIONS
-========================= */
+/* =========================================================
+   LOCATION DATA LOAD
+========================================================= */
 
-function getDistrictOptions() {
+async function loadLocationData() {
 
-  return `
+  if (locationData) {
+    populateDistricts();
+    return;
+  }
+
+
+  const districtSelect =
+    document.querySelector(
+      "#customerDistrict"
+    );
+
+  if (districtSelect) {
+
+    districtSelect.innerHTML = `
+      <option value="">
+        Loading Districts...
+      </option>
+    `;
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        LOCATION_URL,
+        {
+          cache: "force-cache"
+        }
+      );
+
+
+    if (!response.ok) {
+      throw new Error(
+        "Location data failed."
+      );
+    }
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !data ||
+      !Array.isArray(
+        data.divisions
+      )
+    ) {
+      throw new Error(
+        "Invalid location data."
+      );
+    }
+
+
+    locationData =
+      data.divisions;
+
+
+    populateDistricts();
+
+  } catch (error) {
+
+    console.error(
+      "Location loading error:",
+      error
+    );
+
+
+    if (districtSelect) {
+
+      districtSelect.innerHTML = `
+        <option value="">
+          Select District (Optional)
+        </option>
+      `;
+
+    }
+
+    const note =
+      document.querySelector(
+        "#locationNote"
+      );
+
+    if (note) {
+
+      note.textContent =
+        "District list could not be loaded. You can type your location manually.";
+
+    }
+  }
+}
+
+
+/* =========================================================
+   DISTRICT LIST
+========================================================= */
+
+function getAllDistricts() {
+
+  const list = [];
+
+  if (!Array.isArray(locationData)) {
+    return list;
+  }
+
+
+  locationData.forEach(
+    division => {
+
+      if (
+        !Array.isArray(
+          division.districts
+        )
+      ) {
+        return;
+      }
+
+
+      division.districts.forEach(
+        district => {
+
+          if (
+            district &&
+            district.name
+          ) {
+
+            list.push(
+              district
+            );
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  return list.sort(
+    (a, b) =>
+      String(a.name).localeCompare(
+        String(b.name)
+      )
+  );
+}
+
+
+function populateDistricts() {
+
+  const districtSelect =
+    document.querySelector(
+      "#customerDistrict"
+    );
+
+  if (!districtSelect) {
+    return;
+  }
+
+
+  districtSelect.innerHTML = `
     <option value="">
       Select District (Optional)
     </option>
-
-    ${districts.map(
-      district => `
-        <option value="${district}">
-          ${district}
-        </option>
-      `
-    ).join("")}
   `;
+
+
+  const districts =
+    getAllDistricts();
+
+
+  districts.forEach(
+    district => {
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+      option.value =
+        district.name;
+
+      /*
+        Customer sees:
+        Bangla name + English name
+        if available.
+      */
+
+      option.textContent =
+        district.bnName
+          ? `${district.bnName} (${district.name})`
+          : district.name;
+
+      districtSelect.appendChild(
+        option
+      );
+
+    }
+  );
 }
 
 
-/* =========================
+/* =========================================================
+   FIND SELECTED DISTRICT
+========================================================= */
+
+function findDistrict(
+  districtName
+) {
+
+  if (!Array.isArray(locationData)) {
+    return null;
+  }
+
+
+  for (
+    const division
+    of locationData
+  ) {
+
+    if (
+      !Array.isArray(
+        division.districts
+      )
+    ) {
+      continue;
+    }
+
+
+    const district =
+      division.districts.find(
+        item =>
+          item.name ===
+          districtName
+      );
+
+
+    if (district) {
+      return district;
+    }
+  }
+
+
+  return null;
+}
+
+
+/* =========================================================
+   DISTRICT → THANA / UPAZILA
+   CUSTOMER SEES ONLY NAME
+========================================================= */
+
+function populatePoliceStations() {
+
+  const districtSelect =
+    document.querySelector(
+      "#customerDistrict"
+    );
+
+  const policeInput =
+    document.querySelector(
+      "#customerPoliceStation"
+    );
+
+  const list =
+    document.querySelector(
+      "#policeStationList"
+    );
+
+  if (
+    !districtSelect ||
+    !policeInput ||
+    !list
+  ) {
+    return;
+  }
+
+
+  list.innerHTML = "";
+
+  policeInput.value = "";
+
+
+  const districtName =
+    districtSelect.value;
+
+
+  if (!districtName) {
+
+    policeInput.placeholder =
+      "Select District first";
+
+    return;
+  }
+
+
+  const district =
+    findDistrict(
+      districtName
+    );
+
+
+  if (
+    !district ||
+    !Array.isArray(
+      district.upazilas
+    )
+  ) {
+
+    policeInput.placeholder =
+      "Type your Thana / Upazila";
+
+    return;
+  }
+
+
+  /*
+    We intentionally do NOT show
+    "Thana" or "Upazila".
+
+    Customer sees only the location name.
+  */
+
+  const names = [];
+
+  district.upazilas.forEach(
+    location => {
+
+      if (
+        location &&
+        location.name
+      ) {
+
+        names.push({
+          name:
+            location.name,
+
+          bnName:
+            location.bnName || ""
+        });
+
+      }
+
+    }
+  );
+
+
+  /*
+    Remove duplicate names.
+  */
+
+  const unique =
+    new Map();
+
+
+  names.forEach(
+    item => {
+
+      const key =
+        item.name
+          .toLowerCase()
+          .trim();
+
+      if (
+        !unique.has(key)
+      ) {
+
+        unique.set(
+          key,
+          item
+        );
+
+      }
+
+    }
+  );
+
+
+  Array.from(
+    unique.values()
+  )
+  .sort(
+    (a, b) =>
+      String(a.name).localeCompare(
+        String(b.name)
+      )
+  )
+  .forEach(
+    location => {
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+      /*
+        Value = English name
+        Label = Bangla + English
+        No type label.
+      */
+
+      option.value =
+        location.name;
+
+      option.label =
+        location.bnName
+          ? `${location.bnName} (${location.name})`
+          : location.name;
+
+      list.appendChild(
+        option
+      );
+
+    }
+  );
+
+
+  policeInput.placeholder =
+    unique.size
+      ? "Type or select location"
+      : "Type Police Station / Upazila";
+
+}
+
+
+/* =========================================================
    CHECKOUT
-========================= */
+========================================================= */
 
 function openCheckout() {
 
@@ -786,14 +1441,15 @@ function openCheckout() {
     cart.map(item => {
 
       const product =
-        products.find(
-          p => p.id === item.id
-        );
+        getProduct(item.id);
 
-      if (!product) return "";
+      if (!product) {
+        return "";
+      }
 
 
       return `
+
         <div
           style="
             padding:8px 0;
@@ -813,6 +1469,7 @@ function openCheckout() {
           ${money(product.price)}
 
         </div>
+
       `;
 
     }).join("");
@@ -823,7 +1480,18 @@ function openCheckout() {
       "#modalContent"
     );
 
-  if (!content) return;
+  const modal =
+    document.querySelector(
+      "#productModal"
+    );
+
+
+  if (
+    !content ||
+    !modal
+  ) {
+    return;
+  }
 
 
   content.innerHTML = `
@@ -845,7 +1513,11 @@ function openCheckout() {
 
       <!-- PRODUCT SUMMARY -->
 
-      <div style="margin:18px 0;">
+      <div
+        style="
+          margin:18px 0;
+        "
+      >
         ${summary}
       </div>
 
@@ -947,6 +1619,7 @@ function openCheckout() {
             border:1px solid #ddd;
             border-radius:8px;
             box-sizing:border-box;
+            resize:vertical;
           "
         ></textarea>
 
@@ -977,7 +1650,9 @@ function openCheckout() {
           "
         >
 
-          ${getDistrictOptions()}
+          <option value="">
+            Loading Districts...
+          </option>
 
         </select>
 
@@ -999,7 +1674,9 @@ function openCheckout() {
         <input
           id="customerPoliceStation"
           type="text"
-          placeholder="Police Station"
+          list="policeStationList"
+          autocomplete="off"
+          placeholder="Select District first"
           style="
             width:100%;
             padding:12px;
@@ -1008,6 +1685,19 @@ function openCheckout() {
             box-sizing:border-box;
           "
         >
+
+        <datalist
+          id="policeStationList"
+        ></datalist>
+
+
+        <div
+          id="locationNote"
+          class="rm-location-note"
+        >
+          Select a District to see
+          its locations.
+        </div>
 
 
         <!-- DELIVERY AREA -->
@@ -1126,7 +1816,7 @@ function openCheckout() {
         </div>
 
 
-        <!-- SELECTED DELIVERY CHARGE -->
+        <!-- DELIVERY CHARGE -->
 
         <div
           style="
@@ -1180,6 +1870,19 @@ function openCheckout() {
         </button>
 
 
+        <!-- CALL NOW -->
+
+        <div class="rm-order-call">
+
+          Need help before confirming?
+
+          <a href="tel:01867646346">
+            📞 CALL NOW — 01867646346
+          </a>
+
+        </div>
+
+
       </form>
 
 
@@ -1191,15 +1894,48 @@ function openCheckout() {
       ></p>
 
     </div>
+
   `;
 
 
-  document.querySelector(
-    "#productModal"
-  ).classList.remove("hidden");
+  modal.classList.remove(
+    "hidden"
+  );
 
 
-  /* DELIVERY CHANGE */
+  /*
+    Load Districts
+  */
+
+  if (locationData) {
+    populateDistricts();
+  } else {
+    loadLocationData();
+  }
+
+
+  /*
+    District change
+  */
+
+  const districtSelect =
+    document.querySelector(
+      "#customerDistrict"
+    );
+
+  if (districtSelect) {
+
+    districtSelect.addEventListener(
+      "change",
+      populatePoliceStations
+    );
+
+  }
+
+
+  /*
+    Delivery change
+  */
 
   const deliverySelect =
     document.querySelector(
@@ -1212,10 +1948,13 @@ function openCheckout() {
       "change",
       updateDeliveryTotal
     );
+
   }
 
 
-  /* FORM SUBMIT */
+  /*
+    Form submit
+  */
 
   const orderForm =
     document.querySelector(
@@ -1228,20 +1967,36 @@ function openCheckout() {
       "submit",
       submitOrder
     );
+
   }
+
+
+  /*
+    Start with zero delivery charge
+  */
+
+  updateDeliveryTotal();
 }
 
 
-/* =========================
+/* =========================================================
    DELIVERY TOTAL
-========================= */
+========================================================= */
 
 function updateDeliveryTotal() {
 
-  const area =
+  const deliverySelect =
     document.querySelector(
       "#deliveryArea"
-    ).value;
+    );
+
+  if (!deliverySelect) {
+    return;
+  }
+
+
+  const area =
+    deliverySelect.value;
 
 
   const charge =
@@ -1268,10 +2023,17 @@ function updateDeliveryTotal() {
     );
 
 
+  const productTotalElement =
+    document.querySelector(
+      "#productTotal"
+    );
+
+
   if (chargeElement) {
 
     chargeElement.textContent =
       money(charge);
+
   }
 
 
@@ -1279,13 +2041,22 @@ function updateDeliveryTotal() {
 
     totalElement.textContent =
       money(finalTotal);
+
+  }
+
+
+  if (productTotalElement) {
+
+    productTotalElement.textContent =
+      money(productTotal);
+
   }
 }
 
 
-/* =========================
+/* =========================================================
    SUBMIT ORDER
-========================= */
+========================================================= */
 
 async function submitOrder(event) {
 
@@ -1305,39 +2076,66 @@ async function submitOrder(event) {
 
 
   const name =
-    document.querySelector(
-      "#customerName"
-    ).value.trim();
+    document
+      .querySelector(
+        "#customerName"
+      )
+      .value
+      .trim();
 
 
   const phone =
-    document.querySelector(
-      "#customerPhone"
-    ).value.trim();
+    document
+      .querySelector(
+        "#customerPhone"
+      )
+      .value
+      .trim();
 
 
   const address =
+    document
+      .querySelector(
+        "#customerAddress"
+      )
+      .value
+      .trim();
+
+
+  const districtElement =
     document.querySelector(
-      "#customerAddress"
-    ).value.trim();
+      "#customerDistrict"
+    );
+
+
+  const policeElement =
+    document.querySelector(
+      "#customerPoliceStation"
+    );
+
+
+  const deliveryElement =
+    document.querySelector(
+      "#deliveryArea"
+    );
 
 
   const district =
-    document.querySelector(
-      "#customerDistrict"
-    ).value;
+    districtElement
+      ? districtElement.value
+      : "";
 
 
   const policeStation =
-    document.querySelector(
-      "#customerPoliceStation"
-    ).value.trim();
+    policeElement
+      ? policeElement.value.trim()
+      : "";
 
 
   const deliveryArea =
-    document.querySelector(
-      "#deliveryArea"
-    ).value;
+    deliveryElement
+      ? deliveryElement.value
+      : "";
 
 
   const deliveryCharge =
@@ -1361,8 +2159,40 @@ async function submitOrder(event) {
     !address
   ) {
 
-    message.textContent =
-      "Please fill in all required information.";
+    if (message) {
+
+      message.textContent =
+        "Please fill in your Name, Mobile Number and Delivery Address.";
+
+    }
+
+    return;
+  }
+
+
+  /*
+    Basic Bangladesh / international
+    phone length validation.
+  */
+
+  const phoneDigits =
+    phone.replace(
+      /\D/g,
+      ""
+    );
+
+
+  if (
+    phoneDigits.length < 10 ||
+    phoneDigits.length > 15
+  ) {
+
+    if (message) {
+
+      message.textContent =
+        "Please enter a valid mobile number.";
+
+    }
 
     return;
   }
@@ -1370,19 +2200,31 @@ async function submitOrder(event) {
 
   if (!cart.length) {
 
-    message.textContent =
-      "Your cart is empty.";
+    if (message) {
+
+      message.textContent =
+        "Your cart is empty.";
+
+    }
 
     return;
   }
 
 
-  button.disabled = true;
+  if (button) {
 
-  button.textContent =
-    "Submitting...";
+    button.disabled = true;
+    button.textContent =
+      "Submitting...";
+    button.style.opacity =
+      "0.6";
 
-  message.textContent = "";
+  }
+
+
+  if (message) {
+    message.textContent = "";
+  }
 
 
   const orderNumber =
@@ -1393,173 +2235,265 @@ async function submitOrder(event) {
     cart.map(item => {
 
       const product =
-        products.find(
-          p => p.id === item.id
-        );
+        getProduct(item.id);
 
 
       return {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: item.qty
+
+        id:
+          product.id,
+
+        name:
+          product.name,
+
+        price:
+          product.price,
+
+        quantity:
+          Number(item.qty),
+
+        subtotal:
+          product.price *
+          Number(item.qty)
+
       };
 
     });
 
 
-  const { error } =
-    await supabaseClient
-      .from("orders")
-      .insert({
+  try {
 
-        order_number:
-          orderNumber,
+    const { error } =
+      await supabaseClient
+        .from("orders")
+        .insert({
 
-        customer_name:
-          name,
+          order_number:
+            orderNumber,
 
-        phone:
-          phone,
+          customer_name:
+            name,
 
-        address:
-          address,
+          phone:
+            phone,
 
-        district:
-          district || null,
+          address:
+            address,
 
-        police_station:
-          policeStation || null,
+          district:
+            district || null,
 
-        delivery_area:
-          deliveryArea || null,
+          police_station:
+            policeStation || null,
 
-        delivery_charge:
-          deliveryCharge,
+          delivery_area:
+            deliveryArea || null,
 
-        products:
-          orderProducts,
+          delivery_charge:
+            deliveryCharge,
 
-        total:
-          finalTotal,
+          products:
+            orderProducts,
 
-        status:
-          "new"
+          total:
+            finalTotal,
 
-      });
+          status:
+            "new"
+
+        });
 
 
-  if (error) {
+    if (error) {
 
-    console.error(error);
+      console.error(
+        "Supabase order error:",
+        error
+      );
 
-    message.textContent =
-      "Order could not be submitted. Please try again.";
 
-    button.disabled = false;
+      if (message) {
 
-    button.textContent =
-      "Submit Order";
+        message.textContent =
+          "Order could not be submitted. Please try again.";
 
-    return;
+      }
+
+
+      if (button) {
+
+        button.disabled = false;
+
+        button.textContent =
+          "Submit Order";
+
+        button.style.opacity =
+          "1";
+
+      }
+
+      return;
+    }
+
+
+    /*
+      Clear cart only after
+      successful Supabase insert.
+    */
+
+    cart = [];
+
+    saveCart();
+
+
+    /*
+      SUCCESS SCREEN
+    */
+
+    const content =
+      document.querySelector(
+        "#modalContent"
+      );
+
+
+    if (content) {
+
+      content.innerHTML = `
+
+        <div
+          style="
+            text-align:center;
+            padding:20px;
+          "
+        >
+
+          <div
+            style="
+              font-size:48px;
+            "
+          >
+            ✅
+          </div>
+
+          <h2>
+            Order Submitted
+          </h2>
+
+          <p>
+            Thank you for your order.
+          </p>
+
+          <p>
+            Your Order Number:
+            <strong>
+              ${orderNumber}
+            </strong>
+          </p>
+
+          <p>
+            Product Total:
+            <strong>
+              ${money(productTotal)}
+            </strong>
+          </p>
+
+          <p>
+            Delivery Charge:
+            <strong>
+              ${money(deliveryCharge)}
+            </strong>
+          </p>
+
+          <p>
+            Total Amount:
+            <strong>
+              ${money(finalTotal)}
+            </strong>
+          </p>
+
+          <p>
+            Our team will call you
+            to confirm your order.
+          </p>
+
+          <a
+            href="tel:01867646346"
+            style="
+              display:inline-flex;
+              align-items:center;
+              justify-content:center;
+              gap:7px;
+              margin-top:10px;
+              padding:12px 20px;
+              border-radius:999px;
+              background:#dc2626;
+              color:#fff;
+              text-decoration:none;
+              font-weight:800;
+            "
+          >
+            📞 CALL NOW — 01867646346
+          </a>
+
+          <br>
+
+          <button
+            type="button"
+            class="primary"
+            onclick="
+              document
+                .querySelector('#productModal')
+                .classList.add('hidden');
+            "
+            style="
+              margin-top:15px;
+            "
+          >
+            Close
+          </button>
+
+        </div>
+
+      `;
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Order submission error:",
+      error
+    );
+
+
+    if (message) {
+
+      message.textContent =
+        "Something went wrong. Please try again.";
+
+    }
+
+
+    if (button) {
+
+      button.disabled = false;
+
+      button.textContent =
+        "Submit Order";
+
+      button.style.opacity =
+        "1";
+
+    }
+
   }
 
-
-  /* CLEAR CART */
-
-  cart = [];
-
-  saveCart();
-
-
-  /* SUCCESS */
-
-  document.querySelector(
-    "#modalContent"
-  ).innerHTML = `
-
-    <div
-      style="
-        text-align:center;
-        padding:20px;
-      "
-    >
-
-      <div
-        style="
-          font-size:48px;
-        "
-      >
-        ✅
-      </div>
-
-
-      <h2>
-        Order Submitted
-      </h2>
-
-
-      <p>
-        Thank you for your order.
-      </p>
-
-
-      <p>
-        Your Order Number:
-        <strong>
-          ${orderNumber}
-        </strong>
-      </p>
-
-
-      <p>
-        Product Total:
-        <strong>
-          ${money(productTotal)}
-        </strong>
-      </p>
-
-
-      <p>
-        Delivery Charge:
-        <strong>
-          ${money(deliveryCharge)}
-        </strong>
-      </p>
-
-
-      <p>
-        Total Amount:
-        <strong>
-          ${money(finalTotal)}
-        </strong>
-      </p>
-
-
-      <p>
-        Our team will call you
-        to confirm your order.
-      </p>
-
-
-      <button
-        class="primary"
-        onclick="
-          document.querySelector('#productModal')
-            .classList.add('hidden');
-        "
-      >
-        Close
-      </button>
-
-    </div>
-  `;
 }
 
 
-/* =========================
+/* =========================================================
    BUTTON EVENTS
-========================= */
+========================================================= */
 
 const cartButton =
   document.querySelector(
@@ -1570,6 +2504,7 @@ if (cartButton) {
 
   cartButton.onclick =
     openCart;
+
 }
 
 
@@ -1581,13 +2516,8 @@ const closeCartButton =
 if (closeCartButton) {
 
   closeCartButton.onclick =
-    () => {
+    closeCart;
 
-      document.querySelector(
-        "#cartDrawer"
-      ).classList.add("hidden");
-
-    };
 }
 
 
@@ -1601,17 +2531,27 @@ if (closeModalButton) {
   closeModalButton.onclick =
     () => {
 
-      document.querySelector(
-        "#productModal"
-      ).classList.add("hidden");
+      const modal =
+        document.querySelector(
+          "#productModal"
+        );
+
+      if (modal) {
+
+        modal.classList.add(
+          "hidden"
+        );
+
+      }
 
     };
+
 }
 
 
-/* =========================
+/* =========================================================
    SEARCH
-========================= */
+========================================================= */
 
 const searchInput =
   document.querySelector(
@@ -1626,43 +2566,47 @@ if (searchInput) {
 
       const query =
         event.target.value
-          .toLowerCase();
+          .toLowerCase()
+          .trim();
 
 
       const list =
-        products.filter(product => {
+        products.filter(
+          product => {
 
-          const categoryMatch =
-            selectedCat ===
-              "All Products" ||
-            product.cat ===
-              selectedCat;
-
-
-          const searchMatch =
-            product.name
-              .toLowerCase()
-              .includes(query);
+            const categoryMatch =
+              selectedCat ===
+                "All Products" ||
+              product.cat ===
+                selectedCat;
 
 
-          return (
-            categoryMatch &&
-            searchMatch
-          );
+            const searchMatch =
+              product.name
+                .toLowerCase()
+                .includes(query);
 
-        });
+
+            return (
+              categoryMatch &&
+              searchMatch
+            );
+
+          }
+        );
 
 
       renderProducts(list);
 
     }
   );
+
 }
 
 
-/* =========================
+/* =========================================================
    SORT
-========================= */
+========================================================= */
 
 const sortSelect =
   document.querySelector(
@@ -1690,6 +2634,7 @@ if (sortSelect) {
               product.cat ===
               selectedCat
           );
+
       }
 
 
@@ -1702,6 +2647,7 @@ if (sortSelect) {
           (a, b) =>
             a.price - b.price
         );
+
       }
 
 
@@ -1714,6 +2660,7 @@ if (sortSelect) {
           (a, b) =>
             b.price - a.price
         );
+
       }
 
 
@@ -1727,6 +2674,7 @@ if (sortSelect) {
             b.discount -
             a.discount
         );
+
       }
 
 
@@ -1734,12 +2682,13 @@ if (sortSelect) {
 
     }
   );
+
 }
 
 
-/* =========================
+/* =========================================================
    CHECKOUT BUTTON
-========================= */
+========================================================= */
 
 const checkoutButton =
   document.querySelector(
@@ -1749,16 +2698,66 @@ const checkoutButton =
 if (checkoutButton) {
 
   checkoutButton.onclick =
-    openCheckout;
+    () => {
+
+      closeCart();
+
+      setTimeout(
+        openCheckout,
+        80
+      );
+
+    };
+
 }
 
 
-/* =========================
+/* =========================================================
    START
-========================= */
+========================================================= */
 
 renderCategories();
 
 renderProducts();
 
 saveCart();
+
+addCallNow();
+
+
+/* =========================================================
+   GLOBAL FUNCTIONS
+========================================================= */
+
+window.addToCart =
+  addToCart;
+
+window.buyNow =
+  buyNow;
+
+window.openCart =
+  openCart;
+
+window.closeCart =
+  closeCart;
+
+window.changeQty =
+  changeQty;
+
+window.removeItem =
+  removeItem;
+
+window.openProduct =
+  openProduct;
+
+window.openCheckout =
+  openCheckout;
+
+window.updateDeliveryTotal =
+  updateDeliveryTotal;
+
+window.submitOrder =
+  submitOrder;
+
+window.filterCategory =
+  filterCategory;
