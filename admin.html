@@ -2916,5 +2916,775 @@ checkSession();
 
 </script>
 
-</body>
+<!-- =========================================================
+     RM ONLINE SHOP - CUSTOMER CHECK / FRAUD CHECKER
+     ========================================================= -->
+
+<style>
+  .rm-customer-check-btn{
+    border:0;
+    padding:12px 18px;
+    border-radius:10px;
+    background:#111827;
+    color:#fff;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    margin-left:8px;
+  }
+
+  .rm-customer-check-btn:hover{
+    opacity:.9;
+  }
+
+  .rm-check-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:99999;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+
+  .rm-check-modal{
+    width:min(1050px,100%);
+    max-height:92vh;
+    overflow:auto;
+    background:#fff;
+    border-radius:18px;
+    padding:22px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+  }
+
+  .rm-check-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+    margin-bottom:18px;
+  }
+
+  .rm-check-head h2{
+    margin:0;
+    font-size:22px;
+  }
+
+  .rm-check-close{
+    border:0;
+    background:#f1f5f9;
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    cursor:pointer;
+    font-size:20px;
+  }
+
+  .rm-check-search{
+    display:flex;
+    gap:10px;
+    margin-bottom:20px;
+  }
+
+  .rm-check-search input{
+    flex:1;
+    min-width:0;
+    padding:13px 14px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    font-size:15px;
+  }
+
+  .rm-check-search button{
+    border:0;
+    padding:0 20px;
+    border-radius:10px;
+    background:#111827;
+    color:#fff;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  .rm-check-summary{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:10px;
+    margin-bottom:20px;
+  }
+
+  .rm-check-stat{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:14px;
+    background:#f8fafc;
+  }
+
+  .rm-check-stat small{
+    display:block;
+    color:#64748b;
+    font-size:12px;
+    margin-bottom:6px;
+  }
+
+  .rm-check-stat strong{
+    font-size:21px;
+  }
+
+  .rm-check-section{
+    margin-top:20px;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    overflow:hidden;
+  }
+
+  .rm-check-section-title{
+    padding:13px 15px;
+    background:#f8fafc;
+    font-weight:800;
+  }
+
+  .rm-courier-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:10px;
+    padding:15px;
+  }
+
+  .rm-courier-card{
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:13px;
+  }
+
+  .rm-courier-card strong{
+    display:block;
+    margin-bottom:8px;
+  }
+
+  .rm-courier-card span{
+    font-size:12px;
+    color:#64748b;
+  }
+
+  .rm-order-table{
+    width:100%;
+    border-collapse:collapse;
+  }
+
+  .rm-order-table th,
+  .rm-order-table td{
+    padding:10px 12px;
+    border-top:1px solid #e5e7eb;
+    text-align:left;
+    font-size:13px;
+  }
+
+  .rm-order-table th{
+    background:#f8fafc;
+  }
+
+  .rm-check-empty{
+    padding:25px;
+    text-align:center;
+    color:#64748b;
+  }
+
+  .rm-check-warning{
+    margin-top:15px;
+    padding:13px 15px;
+    border-radius:10px;
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    color:#9a3412;
+    font-size:13px;
+  }
+
+  @media(max-width:850px){
+    .rm-check-summary{
+      grid-template-columns:repeat(3,1fr);
+    }
+
+    .rm-courier-grid{
+      grid-template-columns:repeat(2,1fr);
+    }
+  }
+
+  @media(max-width:550px){
+    .rm-check-summary{
+      grid-template-columns:repeat(2,1fr);
+    }
+
+    .rm-check-search{
+      flex-direction:column;
+    }
+
+    .rm-check-search button{
+      padding:12px;
+    }
+
+    .rm-courier-grid{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+<script>
+(function(){
+
+  /* ---------- ADD CUSTOMER CHECK BUTTON ---------- */
+
+  function addCustomerCheckButton(){
+
+    if(document.getElementById("rmCustomerCheckBtn")) return;
+
+    const btn = document.createElement("button");
+
+    btn.id = "rmCustomerCheckBtn";
+    btn.className = "rm-customer-check-btn";
+    btn.innerHTML = "🔎 Customer Check";
+
+    btn.onclick = function(){
+      document.getElementById("rmCustomerCheckOverlay").style.display = "flex";
+      setTimeout(function(){
+        document.getElementById("rmCustomerPhone").focus();
+      },100);
+    };
+
+    /* Try common admin header/topbar locations */
+    const targets = [
+      ".topbar",
+      ".admin-topbar",
+      ".header-actions",
+      ".actions"
+    ];
+
+    let placed = false;
+
+    for(const selector of targets){
+      const el = document.querySelector(selector);
+
+      if(el){
+        el.appendChild(btn);
+        placed = true;
+        break;
+      }
+    }
+
+    /* fallback */
+    if(!placed){
+      document.body.appendChild(btn);
+    }
+  }
+
+
+  /* ---------- CREATE CUSTOMER CHECK MODAL ---------- */
+
+  function createCustomerCheck(){
+
+    if(document.getElementById("rmCustomerCheckOverlay")) return;
+
+    const overlay = document.createElement("div");
+
+    overlay.id = "rmCustomerCheckOverlay";
+    overlay.className = "rm-check-overlay";
+
+    overlay.innerHTML = `
+      <div class="rm-check-modal">
+
+        <div class="rm-check-head">
+          <h2>🔎 Customer Check</h2>
+
+          <button
+            class="rm-check-close"
+            onclick="document.getElementById('rmCustomerCheckOverlay').style.display='none'">
+            ×
+          </button>
+        </div>
+
+        <div class="rm-check-search">
+
+          <input
+            id="rmCustomerPhone"
+            type="tel"
+            placeholder="Customer mobile number"
+            autocomplete="off">
+
+          <button onclick="rmRunCustomerCheck()">
+            Check Customer
+          </button>
+
+        </div>
+
+        <div id="rmCustomerResult">
+
+          <div class="rm-check-empty">
+            Customer mobile number দিয়ে Check Customer চাপুন।
+          </div>
+
+        </div>
+
+      </div>
+    `;
+
+    overlay.addEventListener("click",function(e){
+      if(e.target === overlay){
+        overlay.style.display = "none";
+      }
+    });
+
+    document.body.appendChild(overlay);
+  }
+
+
+  /* ---------- PHONE NORMALIZE ---------- */
+
+  function normalizePhone(phone){
+
+    return String(phone || "")
+      .replace(/\D/g,"")
+      .replace(/^880/,"0")
+      .replace(/^88/,"0");
+  }
+
+
+  /* ---------- ESCAPE HTML ---------- */
+
+  function rmEscape(value){
+
+    return String(value ?? "")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#039;");
+  }
+
+
+  /* ---------- CUSTOMER CHECK ---------- */
+
+  window.rmRunCustomerCheck = async function(){
+
+    const input = document.getElementById("rmCustomerPhone");
+    const result = document.getElementById("rmCustomerResult");
+
+    const phone = normalizePhone(input.value);
+
+    if(!phone){
+
+      result.innerHTML = `
+        <div class="rm-check-warning">
+          ⚠️ Customer mobile number দিন।
+        </div>
+      `;
+
+      return;
+    }
+
+    result.innerHTML = `
+      <div class="rm-check-empty">
+        🔄 Customer data checking...
+      </div>
+    `;
+
+
+    try{
+
+      /* Use existing Supabase client */
+      let client = null;
+
+      if(typeof supabaseClient !== "undefined"){
+        client = supabaseClient;
+      }
+
+      if(!client && typeof supabase !== "undefined"){
+        client = supabase;
+      }
+
+      if(!client){
+
+        result.innerHTML = `
+          <div class="rm-check-warning">
+            ⚠️ Supabase connection পাওয়া যায়নি।
+          </div>
+        `;
+
+        return;
+      }
+
+
+      /* Get all orders */
+      const response = await client
+        .from("orders")
+        .select("*")
+        .order("created_at",{ascending:false});
+
+
+      if(response.error){
+        throw response.error;
+      }
+
+
+      const allOrders = response.data || [];
+
+
+      /* Match customer phone */
+      const customerOrders = allOrders.filter(function(order){
+
+        return normalizePhone(
+          order.phone ||
+          order.mobile ||
+          order.customer_phone ||
+          order.customerPhone
+        ) === phone;
+
+      });
+
+
+      if(customerOrders.length === 0){
+
+        result.innerHTML = `
+          <div class="rm-check-empty">
+
+            <div style="font-size:35px;margin-bottom:8px;">
+              🔍
+            </div>
+
+            <strong>No order found</strong>
+
+            <div style="margin-top:6px;">
+              ${rmEscape(phone)}
+            </div>
+
+          </div>
+
+          <div class="rm-check-section">
+
+            <div class="rm-check-section-title">
+              Courier Check
+            </div>
+
+            <div class="rm-courier-grid">
+
+              ${rmCourierCard("Steadfast")}
+              ${rmCourierCard("REDX")}
+              ${rmCourierCard("Pathao")}
+              ${rmCourierCard("CarryBee")}
+              ${rmCourierCard("Paperfly")}
+
+            </div>
+
+          </div>
+        `;
+
+        return;
+      }
+
+
+      /* ---------- CALCULATE ---------- */
+
+      const total = customerOrders.length;
+
+      const delivered = customerOrders.filter(function(order){
+        return rmStatus(order) === "delivered";
+      }).length;
+
+      const cancelled = customerOrders.filter(function(order){
+        const s = rmStatus(order);
+
+        return [
+          "cancelled",
+          "canceled",
+          "cancel",
+          "returned",
+          "return"
+        ].includes(s);
+      }).length;
+
+
+      const pending = total - delivered - cancelled;
+
+
+      const deliveryRate =
+        total > 0
+          ? ((delivered / total) * 100).toFixed(1)
+          : "0.0";
+
+
+      const cancelRate =
+        total > 0
+          ? ((cancelled / total) * 100).toFixed(1)
+          : "0.0";
+
+
+      const customerName =
+        customerOrders[0].customer_name ||
+        customerOrders[0].customerName ||
+        customerOrders[0].name ||
+        "Unknown";
+
+
+      /* ---------- ORDER TABLE ---------- */
+
+      let rows = "";
+
+      customerOrders.forEach(function(order){
+
+        const status =
+          order.status ||
+          "Unknown";
+
+        const orderId =
+          order.order_number ||
+          order.order_id ||
+          order.id ||
+          "-";
+
+        const date =
+          order.created_at
+            ? new Date(order.created_at).toLocaleString()
+            : "-";
+
+        const totalAmount =
+          order.total ??
+          order.grand_total ??
+          order.amount ??
+          "-";
+
+
+        rows += `
+          <tr>
+
+            <td>
+              ${rmEscape(orderId)}
+            </td>
+
+            <td>
+              ${rmEscape(date)}
+            </td>
+
+            <td>
+              ${rmEscape(status)}
+            </td>
+
+            <td>
+              ৳${rmEscape(totalAmount)}
+            </td>
+
+          </tr>
+        `;
+
+      });
+
+
+      /* ---------- RESULT ---------- */
+
+      result.innerHTML = `
+
+        <div style="
+          margin-bottom:15px;
+          font-size:15px;
+        ">
+
+          <strong>${rmEscape(customerName)}</strong>
+
+          <div style="
+            color:#64748b;
+            margin-top:4px;
+          ">
+            📞 ${rmEscape(phone)}
+          </div>
+
+        </div>
+
+
+        <div class="rm-check-summary">
+
+          <div class="rm-check-stat">
+            <small>Total Orders</small>
+            <strong>${total}</strong>
+          </div>
+
+          <div class="rm-check-stat">
+            <small>Delivered</small>
+            <strong>${delivered}</strong>
+          </div>
+
+          <div class="rm-check-stat">
+            <small>Cancelled / Returned</small>
+            <strong>${cancelled}</strong>
+          </div>
+
+          <div class="rm-check-stat">
+            <small>Pending</small>
+            <strong>${pending}</strong>
+          </div>
+
+          <div class="rm-check-stat">
+            <small>Delivery Rate</small>
+            <strong>${deliveryRate}%</strong>
+          </div>
+
+          <div class="rm-check-stat">
+            <small>Cancel / Return Rate</small>
+            <strong>${cancelRate}%</strong>
+          </div>
+
+        </div>
+
+
+        <div class="rm-check-section">
+
+          <div class="rm-check-section-title">
+            🚚 Courier History
+          </div>
+
+          <div class="rm-courier-grid">
+
+            ${rmCourierCard("Steadfast")}
+            ${rmCourierCard("REDX")}
+            ${rmCourierCard("Pathao")}
+            ${rmCourierCard("CarryBee")}
+            ${rmCourierCard("Paperfly")}
+
+          </div>
+
+        </div>
+
+
+        <div class="rm-check-section">
+
+          <div class="rm-check-section-title">
+            📦 RM Online Shop Order History
+          </div>
+
+          <div style="overflow:auto;">
+
+            <table class="rm-order-table">
+
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                ${rows}
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+
+        <div class="rm-check-warning">
+
+          ℹ️ এই Customer Check বর্তমানে তোমার
+          <strong>RM Online Shop-এর নিজস্ব order data</strong>
+          দিয়ে হিসাব করছে।
+
+          Steadfast, REDX, Pathao, CarryBee ও Paperfly-এর
+          external history এখনো API/access না থাকায় দেখানো হচ্ছে না।
+
+        </div>
+
+      `;
+
+    }catch(error){
+
+      console.error(error);
+
+      result.innerHTML = `
+        <div class="rm-check-warning">
+
+          ⚠️ Customer check করতে সমস্যা হয়েছে।
+
+          <br><br>
+
+          ${rmEscape(error.message || error)}
+
+        </div>
+      `;
+
+    }
+
+  };
+
+
+  /* ---------- STATUS ---------- */
+
+  function rmStatus(order){
+
+    return String(
+      order.status || ""
+    )
+    .trim()
+    .toLowerCase();
+
+  }
+
+
+  /* ---------- COURIER CARD ---------- */
+
+  function rmCourierCard(name){
+
+    return `
+      <div class="rm-courier-card">
+
+        <strong>${rmEscape(name)}</strong>
+
+        <span>
+          🔒 Not Connected
+        </span>
+
+        <div style="
+          margin-top:7px;
+          font-size:12px;
+          color:#94a3b8;
+        ">
+          API access required
+        </div>
+
+      </div>
+    `;
+
+  }
+
+
+  /* ---------- START ---------- */
+
+  function startCustomerChecker(){
+
+    createCustomerCheck();
+
+    addCustomerCheckButton();
+
+  }
+
+
+  if(document.readyState === "loading"){
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      startCustomerChecker
+    );
+
+  }else{
+
+    startCustomerChecker();
+
+  }
+
+
+  /* In case existing admin UI loads later */
+  setTimeout(startCustomerChecker,1000);
+  setTimeout(startCustomerChecker,2500);
+
+})();
+</script>body>
 </html>
