@@ -2946,3 +2946,116 @@ Grand Total: ${money(grandTotal)}`
 
 
 })();
+/* =========================================================
+   MOVE DELIVERY CHARGE INFO BELOW THANA
+   DO NOT CHANGE DISTRICT / THANA SYSTEM
+========================================================= */
+
+(function () {
+
+  function rmMoveDeliveryInfo() {
+
+    const thanaInput =
+      document.querySelector("#customerThana");
+
+    const deliveryBox =
+      document.querySelector("#rmDeliveryChargeBox");
+
+    if (
+      !thanaInput ||
+      !deliveryBox
+    ) {
+      return;
+    }
+
+
+    /* Already moved */
+    if (
+      document.querySelector("#rmDeliveryInfoBox")
+    ) {
+      return;
+    }
+
+
+    const children =
+      Array.from(
+        deliveryBox.children
+      );
+
+
+    if (children.length < 3) {
+      return;
+    }
+
+
+    /* Take only the information part */
+
+    const title =
+      children[0];
+
+    const dhakaText =
+      children[1];
+
+    const outsideText =
+      children[2];
+
+
+    /* Create separate information box */
+
+    const infoBox =
+      document.createElement("div");
+
+
+    infoBox.id =
+      "rmDeliveryInfoBox";
+
+
+    infoBox.style.cssText = `
+      margin-top:10px;
+      margin-bottom:10px;
+      padding:12px 14px;
+      background:#f8f8f8;
+      border:1px solid #ddd;
+      border-radius:8px;
+      box-sizing:border-box;
+      line-height:1.8;
+      font-size:14px;
+    `;
+
+
+    infoBox.appendChild(title);
+    infoBox.appendChild(dhakaText);
+    infoBox.appendChild(outsideText);
+
+
+    /* Put the info box directly below Thana */
+
+    thanaInput.parentNode.insertBefore(
+      infoBox,
+      thanaInput.nextSibling
+    );
+
+  }
+
+
+  /* Run after checkout opens */
+
+  const oldOpenCheckout =
+    openCheckout;
+
+
+  openCheckout =
+    function (items = cart) {
+
+      oldOpenCheckout(items);
+
+
+      setTimeout(
+        rmMoveDeliveryInfo,
+        100
+      );
+
+    };
+
+
+})();
