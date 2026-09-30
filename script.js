@@ -13,7 +13,7 @@ const supabaseClient = supabase.createClient(
    PRODUCTS
 ========================================================= */
 
-const products = [
+let products = [
   {
     id: 1,
     name: "Premium Product One",
@@ -95,7 +95,78 @@ const products = [
     rating: "★★★★★"
   }
 ];
+/* =========================
+   LOAD PRODUCTS FROM SUPABASE
+========================= */
+async function loadProductsFromSupabase() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("products")
+      .select("*")
+      .eq("active", true)
+      .order("created_at", { ascending: false });
 
+    if (error) {
+      console.error("Supabase products error:", error);
+      return;
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return;
+    }
+
+    const databaseProducts = data.map(product => {
+
+      const price = Number(product.price || 0);
+      const oldPrice = Number(product.old_price || 0);
+
+      const discount =
+        oldPrice > price
+          ? Math.round(((oldPrice - price) / oldPrice) * 100)
+          : 0;
+
+      const image = product.image_url
+        ? `<img src="${product.image_url}" alt="${product.name}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">`
+        : "🛍️";
+
+      return {
+        id: -Number(product.id),
+        name: product.name || "Product",
+        cat: product.category || "Other",
+        price: price,
+        old: oldPrice,
+        discount: discount,
+        icon: image,
+        rating: "★★★★★",
+        description: product.description || "",
+        stock: Number(product.stock || 0)
+      };
+    });
+
+    /* Remove old database products before adding fresh data */
+    products = products.filter(
+      product => !String(product.id).startsWith("-")
+    );
+
+    products.push(...databaseProducts);
+
+    /* Add new categories automatically */
+    databaseProducts.forEach(product => {
+      if (
+        product.cat &&
+        !categories.includes(product.cat)
+      ) {
+        categories.push(product.cat);
+      }
+    });
+
+    renderCategories();
+    renderProducts();
+
+  } catch (error) {
+    console.error("Product loading error:", error);
+  }
+}
 
 /* =========================================================
    CATEGORIES
@@ -2347,6 +2418,7 @@ renderProducts();
 saveCart();
 
 loadLocationData();
+loadProductsFromSupabase();
 /* =========================================================
    RM ONLINE SHOP - DELIVERY CHARGE + CALL HIGHLIGHT ADD-ON
    DO NOT REMOVE THE EXISTING DISTRICT / THANA SYSTEM
