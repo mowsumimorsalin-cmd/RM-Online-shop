@@ -3111,7 +3111,76 @@ Grand Total: ${money(grandTotal)}`
 
 
   /* Run after checkout opens */
+/* ================================
+   RM ONLINE SHOP - SUPABASE PRODUCT SYNC
+   Loads all active products from Supabase
+================================ */
 
+async function syncSupabaseProductsToWebsite() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("products")
+      .select("*")
+      .eq("active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Supabase Product Error:", error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.log("No active Supabase products found.");
+      return;
+    }
+
+    const supabaseProducts = data.map(function (p) {
+      const price = Number(p.price || 0);
+      const oldPrice = Number(p.old_price || 0);
+
+      const discount =
+        oldPrice > price
+          ? Math.round(((oldPrice - price) / oldPrice) * 100)
+          : 0;
+
+      return {
+        id: "supabase-" + p.id,
+        name: p.name || "Product",
+        cat: p.category || "All Products",
+        price: price,
+        old: oldPrice,
+        discount: discount,
+        icon: p.image_url
+          ? '<img src="' + p.image_url + '" alt="' +
+            (p.name || "Product") +
+            '" style="width:100%;height:100%;object-fit:cover;">'
+          : "🛍️",
+        rating: "★★★★★",
+        description: p.description || "",
+        stock: Number(p.stock || 0)
+      };
+    });
+
+    /* Keep the existing products and add Supabase products */
+    products = products.filter(function (product) {
+      return !String(product.id).startsWith("supabase-");
+    });
+
+    products.push.apply(products, supabaseProducts);
+
+    renderProducts();
+
+    console.log(
+      "Supabase products loaded:",
+      supabaseProducts.length
+    );
+
+  } catch (err) {
+    console.error("Product Sync Error:", err);
+  }
+}
+
+syncSupabaseProductsToWebsite();
   const oldOpenCheckout =
     openCheckout;
 
@@ -3131,3 +3200,6 @@ Grand Total: ${money(grandTotal)}`
 
 
 })();
+
+
+
