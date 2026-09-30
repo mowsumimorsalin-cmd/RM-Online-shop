@@ -3687,4 +3687,1044 @@ checkSession();
 
 })();
 </script>body>
-</html>
+<script>
+/* =========================================================
+   RM ONLINE SHOP - PRODUCT MANAGER
+   ADD / EDIT / DELETE / STOCK / IMAGE UPLOAD
+   ========================================================= */
+
+(function () {
+
+  if (window.rmProductManagerLoaded) return;
+  window.rmProductManagerLoaded = true;
+
+  const BUCKET = "product-images";
+
+  function esc(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function money(value) {
+    return "৳" + Number(value || 0).toLocaleString("en-BD");
+  }
+
+  function injectProductManager() {
+
+    const dashboard = document.getElementById("dashboard");
+
+    if (!dashboard) {
+      setTimeout(injectProductManager, 500);
+      return;
+    }
+
+    if (document.getElementById("rmProductManager")) return;
+
+    const box = document.createElement("div");
+
+    box.id = "rmProductManager";
+
+    box.innerHTML = `
+      <div style="
+        margin:25px 0;
+        padding:20px;
+        background:#fff;
+        border:1px solid #ddd;
+        border-radius:14px;
+        box-shadow:0 2px 8px rgba(0,0,0,.05);
+      ">
+
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:12px;
+          flex-wrap:wrap;
+          margin-bottom:18px;
+        ">
+
+          <div>
+            <h2 style="margin:0 0 5px;">
+              🛍️ Product Manager
+            </h2>
+
+            <div style="color:#777;font-size:13px;">
+              Add, edit, delete and manage products
+            </div>
+          </div>
+
+          <button
+            type="button"
+            id="rmAddProductBtn"
+            style="
+              background:#111;
+              color:#fff;
+              border:0;
+              border-radius:8px;
+              padding:11px 16px;
+              cursor:pointer;
+              font-weight:700;
+            "
+          >
+            + Add Product
+          </button>
+
+        </div>
+
+
+        <div
+          id="rmProductForm"
+          style="
+            display:none;
+            padding:18px;
+            background:#f8f8f8;
+            border:1px solid #ddd;
+            border-radius:12px;
+            margin-bottom:20px;
+          "
+        >
+
+          <h3
+            id="rmProductFormTitle"
+            style="margin-top:0;"
+          >
+            Add New Product
+          </h3>
+
+
+          <input
+            id="rmProductId"
+            type="hidden"
+          >
+
+
+          <label>
+            Product Name
+          </label>
+
+          <input
+            id="rmProductName"
+            type="text"
+            placeholder="Product name"
+            style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:7px;"
+          >
+
+
+          <label>
+            Category
+          </label>
+
+          <input
+            id="rmProductCategory"
+            type="text"
+            placeholder="Category"
+            style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:7px;"
+          >
+
+
+          <div style="
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:12px;
+          ">
+
+            <div>
+
+              <label>
+                Price
+              </label>
+
+              <input
+                id="rmProductPrice"
+                type="number"
+                min="0"
+                placeholder="Price"
+                style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:7px;"
+              >
+
+            </div>
+
+
+            <div>
+
+              <label>
+                Old Price
+              </label>
+
+              <input
+                id="rmProductOldPrice"
+                type="number"
+                min="0"
+                placeholder="Old price"
+                style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:7px;"
+              >
+
+            </div>
+
+          </div>
+
+
+          <label>
+            Stock
+          </label>
+
+          <input
+            id="rmProductStock"
+            type="number"
+            min="0"
+            placeholder="Stock quantity"
+            style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:7px;"
+          >
+
+
+          <label>
+            Product Image
+          </label>
+
+          <input
+            id="rmProductImage"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:7px;background:#fff;"
+          >
+
+
+          <div
+            id="rmCurrentImage"
+            style="margin-top:8px;font-size:12px;color:#777;"
+          ></div>
+
+
+          <label>
+            Description
+          </label>
+
+          <textarea
+            id="rmProductDescription"
+            placeholder="Product description"
+            style="
+              width:100%;
+              box-sizing:border-box;
+              min-height:100px;
+              padding:10px;
+              border:1px solid #ccc;
+              border-radius:7px;
+              resize:vertical;
+            "
+          ></textarea>
+
+
+          <label style="
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin-top:12px;
+          ">
+
+            <input
+              id="rmProductActive"
+              type="checkbox"
+              checked
+            >
+
+            Product Active / Show on website
+
+          </label>
+
+
+          <div style="
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-top:16px;
+          ">
+
+            <button
+              type="button"
+              id="rmSaveProductBtn"
+              style="
+                background:#111;
+                color:#fff;
+                border:0;
+                border-radius:8px;
+                padding:11px 18px;
+                cursor:pointer;
+                font-weight:700;
+              "
+            >
+              Save Product
+            </button>
+
+
+            <button
+              type="button"
+              id="rmCancelProductBtn"
+              style="
+                background:#e5e5e5;
+                color:#111;
+                border:0;
+                border-radius:8px;
+                padding:11px 18px;
+                cursor:pointer;
+              "
+            >
+              Cancel
+            </button>
+
+          </div>
+
+
+          <div
+            id="rmProductMessage"
+            style="margin-top:12px;font-size:13px;"
+          ></div>
+
+        </div>
+
+
+        <div
+          id="rmProductList"
+          style="
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+            gap:15px;
+          "
+        >
+          Loading products...
+        </div>
+
+      </div>
+    `;
+
+
+    dashboard.insertBefore(box, dashboard.firstElementChild);
+
+
+    /* =========================
+       ELEMENTS
+    ========================= */
+
+    const form =
+      document.getElementById("rmProductForm");
+
+    const addBtn =
+      document.getElementById("rmAddProductBtn");
+
+    const saveBtn =
+      document.getElementById("rmSaveProductBtn");
+
+    const cancelBtn =
+      document.getElementById("rmCancelProductBtn");
+
+    const list =
+      document.getElementById("rmProductList");
+
+    const message =
+      document.getElementById("rmProductMessage");
+
+
+    /* =========================
+       FORM RESET
+    ========================= */
+
+    function resetForm() {
+
+      document.getElementById("rmProductId").value = "";
+
+      document.getElementById("rmProductName").value = "";
+
+      document.getElementById("rmProductCategory").value = "";
+
+      document.getElementById("rmProductPrice").value = "";
+
+      document.getElementById("rmProductOldPrice").value = "";
+
+      document.getElementById("rmProductStock").value = "";
+
+      document.getElementById("rmProductImage").value = "";
+
+      document.getElementById("rmProductDescription").value = "";
+
+      document.getElementById("rmProductActive").checked = true;
+
+      document.getElementById("rmProductFormTitle").textContent =
+        "Add New Product";
+
+      document.getElementById("rmCurrentImage").innerHTML = "";
+
+      message.textContent = "";
+
+      message.style.color = "";
+
+    }
+
+
+    /* =========================
+       ADD BUTTON
+    ========================= */
+
+    addBtn.addEventListener("click", function () {
+
+      resetForm();
+
+      form.style.display = "block";
+
+      form.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+
+    });
+
+
+    /* =========================
+       CANCEL
+    ========================= */
+
+    cancelBtn.addEventListener("click", function () {
+
+      resetForm();
+
+      form.style.display = "none";
+
+    });
+
+
+    /* =========================
+       LOAD PRODUCTS
+    ========================= */
+
+    async function loadProducts() {
+
+      list.innerHTML =
+        "<div style='padding:20px;'>Loading products...</div>";
+
+      const { data, error } =
+        await supabaseClient
+          .from("products")
+          .select("*")
+          .order("created_at", {
+            ascending: false
+          });
+
+
+      if (error) {
+
+        list.innerHTML =
+          "<div style='color:#b00020;padding:20px;'>Failed to load products: " +
+          esc(error.message) +
+          "</div>";
+
+        return;
+
+      }
+
+
+      if (!data || data.length === 0) {
+
+        list.innerHTML = `
+          <div style="
+            padding:25px;
+            text-align:center;
+            border:1px dashed #ccc;
+            border-radius:10px;
+            color:#777;
+          ">
+            No products yet.<br>
+            Click <strong>+ Add Product</strong> to add your first product.
+          </div>
+        `;
+
+        return;
+
+      }
+
+
+      list.innerHTML =
+        data.map(product => {
+
+          const image =
+            product.image_url
+              ? `<img
+                   src="${esc(product.image_url)}"
+                   style="
+                     width:100%;
+                     height:180px;
+                     object-fit:cover;
+                     border-radius:9px;
+                     background:#f3f3f3;
+                   "
+                 >`
+              : `
+                <div style="
+                  width:100%;
+                  height:180px;
+                  display:flex;
+                  align-items:center;
+                  justify-content:center;
+                  background:#f3f3f3;
+                  border-radius:9px;
+                  color:#999;
+                ">
+                  No Image
+                </div>
+              `;
+
+
+          return `
+            <div
+              style="
+                border:1px solid #ddd;
+                border-radius:12px;
+                padding:12px;
+                background:#fff;
+              "
+            >
+
+              ${image}
+
+              <div style="padding-top:10px;">
+
+                <div style="
+                  font-weight:700;
+                  font-size:16px;
+                  margin-bottom:5px;
+                ">
+                  ${esc(product.name)}
+                </div>
+
+
+                <div style="
+                  color:#777;
+                  font-size:12px;
+                  margin-bottom:7px;
+                ">
+                  ${esc(product.category || "No category")}
+                </div>
+
+
+                <div style="
+                  display:flex;
+                  gap:8px;
+                  align-items:center;
+                  flex-wrap:wrap;
+                ">
+
+                  <strong>
+                    ${money(product.price)}
+                  </strong>
+
+                  ${
+                    Number(product.old_price) > Number(product.price)
+                      ? `
+                        <span style="
+                          color:#999;
+                          text-decoration:line-through;
+                          font-size:12px;
+                        ">
+                          ${money(product.old_price)}
+                        </span>
+                      `
+                      : ""
+                  }
+
+                </div>
+
+
+                <div style="
+                  margin-top:7px;
+                  font-size:13px;
+                ">
+                  Stock:
+                  <strong>${Number(product.stock || 0)}</strong>
+                </div>
+
+
+                <div style="
+                  margin-top:5px;
+                  font-size:12px;
+                  font-weight:700;
+                  color:${product.active ? "#087f23" : "#b00020"};
+                ">
+                  ${product.active ? "● Active" : "● Hidden"}
+                </div>
+
+
+                <div style="
+                  display:flex;
+                  gap:7px;
+                  margin-top:12px;
+                ">
+
+                  <button
+                    type="button"
+                    class="rm-edit-product"
+                    data-id="${product.id}"
+                    style="
+                      flex:1;
+                      background:#111;
+                      color:#fff;
+                      border:0;
+                      border-radius:7px;
+                      padding:9px;
+                      cursor:pointer;
+                    "
+                  >
+                    Edit
+                  </button>
+
+
+                  <button
+                    type="button"
+                    class="rm-delete-product"
+                    data-id="${product.id}"
+                    style="
+                      flex:1;
+                      background:#ffe8e8;
+                      color:#a00000;
+                      border:0;
+                      border-radius:7px;
+                      padding:9px;
+                      cursor:pointer;
+                    "
+                  >
+                    Delete
+                  </button>
+
+                </div>
+
+              </div>
+
+            </div>
+          `;
+
+        }).join("");
+
+
+      document
+        .querySelectorAll(".rm-edit-product")
+        .forEach(btn => {
+
+          btn.addEventListener("click", function () {
+
+            editProduct(this.dataset.id, data);
+
+          });
+
+        });
+
+
+      document
+        .querySelectorAll(".rm-delete-product")
+        .forEach(btn => {
+
+          btn.addEventListener("click", function () {
+
+            deleteProduct(this.dataset.id, data);
+
+          });
+
+        });
+
+    }
+
+
+    /* =========================
+       EDIT PRODUCT
+    ========================= */
+
+    function editProduct(id, products) {
+
+      const product =
+        products.find(
+          item => String(item.id) === String(id)
+        );
+
+
+      if (!product) return;
+
+
+      document.getElementById("rmProductId").value =
+        product.id;
+
+      document.getElementById("rmProductName").value =
+        product.name || "";
+
+      document.getElementById("rmProductCategory").value =
+        product.category || "";
+
+      document.getElementById("rmProductPrice").value =
+        product.price || 0;
+
+      document.getElementById("rmProductOldPrice").value =
+        product.old_price || 0;
+
+      document.getElementById("rmProductStock").value =
+        product.stock || 0;
+
+      document.getElementById("rmProductDescription").value =
+        product.description || "";
+
+      document.getElementById("rmProductActive").checked =
+        product.active !== false;
+
+      document.getElementById("rmProductImage").value = "";
+
+
+      document.getElementById("rmProductFormTitle").textContent =
+        "Edit Product";
+
+
+      document.getElementById("rmCurrentImage").innerHTML =
+        product.image_url
+          ? "Current image: <a href='" +
+            esc(product.image_url) +
+            "' target='_blank'>View image</a>"
+          : "No current image";
+
+
+      message.textContent = "";
+
+      form.style.display = "block";
+
+      form.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+
+    }
+
+
+    /* =========================
+       SAVE PRODUCT
+    ========================= */
+
+    saveBtn.addEventListener("click", async function () {
+
+      const id =
+        document.getElementById("rmProductId").value.trim();
+
+      const name =
+        document.getElementById("rmProductName").value.trim();
+
+      const category =
+        document.getElementById("rmProductCategory").value.trim();
+
+      const price =
+        Number(
+          document.getElementById("rmProductPrice").value || 0
+        );
+
+      const oldPrice =
+        Number(
+          document.getElementById("rmProductOldPrice").value || 0
+        );
+
+      const stock =
+        Number(
+          document.getElementById("rmProductStock").value || 0
+        );
+
+      const description =
+        document.getElementById("rmProductDescription").value.trim();
+
+      const active =
+        document.getElementById("rmProductActive").checked;
+
+      const file =
+        document.getElementById("rmProductImage").files[0];
+
+
+      if (!name) {
+
+        message.textContent =
+          "Please enter product name.";
+
+        message.style.color =
+          "#b00020";
+
+        return;
+
+      }
+
+
+      saveBtn.disabled = true;
+
+      saveBtn.textContent =
+        "Saving...";
+
+      message.textContent =
+        "Please wait...";
+
+      message.style.color =
+        "#555";
+
+
+      try {
+
+        let imageUrl = "";
+
+
+        /* =========================
+           GET OLD IMAGE WHEN EDITING
+        ========================= */
+
+        if (id) {
+
+          const { data: oldProduct, error: oldError } =
+            await supabaseClient
+              .from("products")
+              .select("image_url")
+              .eq("id", id)
+              .single();
+
+
+          if (oldError) {
+            throw oldError;
+          }
+
+
+          imageUrl =
+            oldProduct.image_url || "";
+
+        }
+
+
+        /* =========================
+           IMAGE UPLOAD
+        ========================= */
+
+        if (file) {
+
+          const extension =
+            file.name
+              .split(".")
+              .pop()
+              .toLowerCase();
+
+
+          const fileName =
+            Date.now() +
+            "-" +
+            Math.random()
+              .toString(36)
+              .substring(2, 9) +
+            "." +
+            extension;
+
+
+          const filePath =
+            "products/" + fileName;
+
+
+          const { error: uploadError } =
+            await supabaseClient
+              .storage
+              .from(BUCKET)
+              .upload(
+                filePath,
+                file,
+                {
+                  upsert: false,
+                  contentType: file.type
+                }
+              );
+
+
+          if (uploadError) {
+            throw uploadError;
+          }
+
+
+          const publicResult =
+            supabaseClient
+              .storage
+              .from(BUCKET)
+              .getPublicUrl(filePath);
+
+
+          imageUrl =
+            publicResult.data.publicUrl;
+
+        }
+
+
+        /* =========================
+           PRODUCT DATA
+        ========================= */
+
+        const productData = {
+
+          name: name,
+
+          price: price,
+
+          old_price: oldPrice,
+
+          category: category,
+
+          image_url: imageUrl,
+
+          description: description,
+
+          stock: stock,
+
+          active: active
+
+        };
+
+
+        /* =========================
+           INSERT / UPDATE
+        ========================= */
+
+        let result;
+
+
+        if (id) {
+
+          result =
+            await supabaseClient
+              .from("products")
+              .update(productData)
+              .eq("id", id);
+
+        } else {
+
+          result =
+            await supabaseClient
+              .from("products")
+              .insert(productData);
+
+        }
+
+
+        if (result.error) {
+          throw result.error;
+        }
+
+
+        message.textContent =
+          id
+            ? "Product updated successfully."
+            : "Product added successfully.";
+
+
+        message.style.color =
+          "#087f23";
+
+
+        resetForm();
+
+        form.style.display =
+          "none";
+
+
+        await loadProducts();
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        message.textContent =
+          "Error: " +
+          (error.message || "Something went wrong");
+
+        message.style.color =
+          "#b00020";
+
+      }
+
+
+      saveBtn.disabled = false;
+
+      saveBtn.textContent =
+        "Save Product";
+
+    });
+
+
+    /* =========================
+       DELETE PRODUCT
+    ========================= */
+
+    async function deleteProduct(id, products) {
+
+      const product =
+        products.find(
+          item => String(item.id) === String(id)
+        );
+
+
+      if (!product) return;
+
+
+      const ok =
+        confirm(
+          "Delete this product?\n\n" +
+          product.name
+        );
+
+
+      if (!ok) return;
+
+
+      try {
+
+        const { error } =
+          await supabaseClient
+            .from("products")
+            .delete()
+            .eq("id", id);
+
+
+        if (error) {
+          throw error;
+        }
+
+
+        await loadProducts();
+
+
+      } catch (error) {
+
+        alert(
+          "Delete failed: " +
+          (error.message || "Unknown error")
+        );
+
+      }
+
+    }
+
+
+    /* =========================
+       START
+    ========================= */
+
+    loadProducts();
+
+  }
+
+
+  if (document.readyState === "loading") {
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      injectProductManager
+    );
+
+  } else {
+
+    injectProductManager();
+
+  }
+
+
+})();
+</script></body></html>
